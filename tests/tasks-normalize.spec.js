@@ -11,8 +11,9 @@ describe("task navigator normalization", () => {
     { task_id: "Pflichtaufgabe 1a", topic: "Analysis", question: "Q1", expected_answer: "", source: { level: "GK", year: "ab-2026" }, points: 2 },
     { task_id: "Pflichtaufgabe 1b", topic: "Analysis", question: "Q2", expected_answer: "", source: { level: "GK", year: "ab-2026" }, points: 3 },
     { task_id: "Pflichtaufgabe 2a", topic: "Analysis", question: "Q3", expected_answer: "", source: { level: "GK", year: "ab-2026" }, points: 2 },
-    { task_id: "Aufgabe a) (1)", topic: "Stochastik", question: "Löse folgende Aufgabe aus dem NRW Abitur 2025-Beispiel (Mathematik, LK):\n\nEine Funktion f ist gegeben.\n\nQ4", expected_answer: "A4", source: { level: "LK", year: "2025-Beispiel" }, points: 2 },
-    { task_id: "Aufgabe a) (2)", topic: "Stochastik", question: "Löse folgende Aufgabe aus dem NRW Abitur 2025-Beispiel (Mathematik, LK):\n\nEine Funktion f ist gegeben.\n\nQ5", expected_answer: "A5", source: { level: "LK", year: "2025-Beispiel" }, points: 4 },
+    { task_id: "Aufgabe a) (1)", topic: "Stochastik", question: "Löse folgende Aufgabe aus dem NRW Abitur 2025-Beispiel (Mathematik, LK):\n\nBegründen Sie, dass die gegebene Wahrscheinlichkeit sinnvoll ist.\n\nQ4", expected_answer: "A4", source: { level: "LK", year: "2025-Beispiel" }, points: 2 },
+    { task_id: "Aufgabe a) (2)", topic: "Stochastik", question: "Löse folgende Aufgabe aus dem NRW Abitur 2025-Beispiel (Mathematik, LK):\n\nBegründen Sie, dass die gegebene Wahrscheinlichkeit sinnvoll ist.\n\nQ5", expected_answer: "A5", source: { level: "LK", year: "2025-Beispiel" }, points: 4 },
+    { task_id: "Aufgabe b)", topic: "Stochastik", question: "Löse folgende Aufgabe aus dem NRW Abitur 2025-Beispiel (Mathematik, GK):\n\nDer Graph der Funktion f ist in Abbildung 1 dargestellt.\nBerechnen Sie den Flächeninhalt.", expected_answer: "", source: { level: "GK", year: "2025-Beispiel" }, points: 3 },
   ];
 
   it("keeps level groups separate", () => {
@@ -50,6 +51,8 @@ describe("task navigator normalization", () => {
     expect(synthetic.question).toContain("Teil 1");
     expect(synthetic.examPart).toBe("2. Prüfungsteil");
     expect(synthetic.toolType).toBe("mit Hilfsmitteln");
+    expect(synthetic.toolMode).toBe("supported");
+    expect(synthetic.primaryOperator).toBe("begruenden");
   });
 
   it("removes generic NRW lead-in boilerplate", () => {
@@ -63,5 +66,15 @@ describe("task navigator normalization", () => {
     expect(topicView.filters.examParts.map((item) => item.id)).toContain("2. Prüfungsteil");
     expect(topicView.filters.taskTypes.map((item) => item.id)).toContain("Prüfungsaufgabe");
     expect(topicView.filters.toolTypes.map((item) => item.id)).toContain("mit Hilfsmitteln");
+  });
+
+  it("extracts figure metadata for tasks that reference an illustration", () => {
+    const index = buildTaskIndex(sampleTasks);
+    const block = getVisibleItems(index, { level: "GK", year: "2025-Beispiel", topic: "Stochastik" }).items[0];
+    const synthetic = buildCombinedTask(block);
+
+    expect(synthetic.figureRequired).toBe(true);
+    expect(synthetic.figureLabel).toBe("Abbildung 1");
+    expect(synthetic.figureStatus).toBe("missing");
   });
 });

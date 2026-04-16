@@ -1,6 +1,6 @@
-# Martha Tutor 3.0
+# Martha Tutor 4.0
 
-New working directory for the hardened version of Martha Tutor.
+Working directory for Martha 4.0, the NRW Mathematik-Abitur prep app.
 
 Base snapshot:
 
@@ -15,7 +15,7 @@ Planned scope:
 - plotting fixes
 - mobile-first task navigator
 
-Current 3.0 structure:
+Current 4.0 structure:
 
 - `index.html`: main app shell and runtime glue
 - `style.css`: shared app styling
@@ -23,8 +23,17 @@ Current 3.0 structure:
 - `tasks-normalize.js`: task-block grouping and navigator hierarchy helpers
 - `auth.js`: Supabase Google OAuth bootstrap
 - `api.js`: authenticated proxy wrapper
+- `ui-helpers.js`: user-visible task meta and notice helpers
 - `tests/index.html`: browser-based smoke tests for the extracted helpers
 - `worker/`: protected proxy worker scaffold with Supabase JWT verification
+
+Testing:
+
+- `npm run test:unit`: node-based unit tests for pure modules
+- `npm run test:dom`: jsdom-based DOM tests with Testing Library
+- `npm run test:coverage`: coverage run with thresholds and HTML report
+- `npm run test:e2e:smoke`: Playwright Chromium smoke test against a local static server
+- `npm test`: fast local gate for unit + DOM
 
 Notes:
 

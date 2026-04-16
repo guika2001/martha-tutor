@@ -1,13 +1,19 @@
 {
-  "name": "3.0",
+  "name": "martha-4-0",
   "version": "1.0.0",
-  "description": "New working directory for the hardened version of Martha Tutor.",
+  "description": "Martha 4.0 working directory with layered testing for the NRW Abitur prep app.",
   "main": "plot.js",
   "directories": {
     "test": "tests"
   },
   "scripts": {
-    "test": "vitest run --globals tests/*.spec.js"
+    "test": "npm run test:unit && npm run test:dom",
+    "test:unit": "vitest run --config vitest.unit.config.mjs",
+    "test:dom": "vitest run --config vitest.dom.config.mjs",
+    "test:coverage": "vitest run --config vitest.coverage.config.mjs --coverage",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:e2e:smoke": "playwright test tests/e2e/smoke.spec.js"
   },
   "repository": {
     "type": "git",
@@ -22,6 +28,11 @@
   },
   "homepage": "https://github.com/guika2001/martha-tutor#readme",
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@vitest/coverage-v8": "^4.1.4",
+    "jsdom": "^29.0.2",
     "vitest": "^4.1.4"
   }
 }

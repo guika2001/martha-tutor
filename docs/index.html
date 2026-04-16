@@ -11,6 +11,21 @@
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mathjs@13.2.0/lib/browser/math.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="storage.js"></script>
+<script src="simulation.js"></script>
+<script src="diagnostics.js"></script>
+<script src="study-plan.js"></script>
+<script src="error-profile.js"></script>
+<script src="repetition.js"></script>
+<script src="analysis-guards.js"></script>
+<script src="stochastik-guards.js"></script>
+<script src="vector-guards.js"></script>
+<script src="solution-guards.js"></script>
+<script src="solution-validator.js"></script>
+<script src="solution-style.js"></script>
+<script src="operatoren.js"></script>
+<script src="tool-mode.js"></script>
+<script src="ui-helpers.js"></script>
 <script src="tasks-normalize.js"></script>
 <script src="plot.js"></script>
 <script src="auth.js"></script>
@@ -30,14 +45,14 @@
       <button class="lang-btn" data-lang="en" onclick="window._setLang('en')">🇬🇧 EN</button>
       <button class="lang-btn" data-lang="es" onclick="window._setLang('es')">🇪🇸 ES</button>
     </div>
-    <div class="auth-panel">
-      <div id="authStatus" class="auth-title">Bejelentkezés szükséges</div>
-      <div id="authHint" class="auth-copy">A feladatok és a chat használatához Google bejelentkezés kell.</div>
-      <div id="authLoginWrap">
-        <button id="authLoginBtn" class="auth-btn" onclick="window._authSignIn()">Google Sign-In</button>
-      </div>
-    </div>
-  </div>
+	    <div class="auth-panel">
+	      <div id="authStatus" class="auth-title">Bejelentkezés szükséges</div>
+	      <div id="authHint" class="auth-copy">A feladatok és a chat használatához Google bejelentkezés kell.</div>
+	      <div id="authLoginWrap">
+	        <button id="authLoginBtn" class="auth-btn" onclick="window._authSignIn()">Google Sign-In</button>
+	      </div>
+	    </div>
+	  </div>
 </div>
 
 <!-- ── APP ── -->
@@ -64,12 +79,31 @@
     <button class="lang-btn" data-lang="es" onclick="window._setLang('es')">🇪🇸 ES</button>
   </div>
   <div class="status"><span class="dot" id="sd"></span><span id="st">Verbinde...</span></div>
+    <div class="sim-launch">
+      <button class="btn-sec sim-launch-btn" id="startSimulationBtn" onclick="window._openSimulationModal()">🧪 Prüfungssimulation</button>
+    </div>
     <div class="auth-inline" id="authBar" style="display:none">
       <div class="auth-inline-copy">
         <div class="auth-inline-label">Angemeldet</div>
         <div class="auth-inline-email" id="authUserEmail"></div>
       </div>
       <button id="authLogoutBtn" class="auth-inline-btn" onclick="window._authSignOut()">Logout</button>
+    </div>
+    <div class="diag-card">
+      <div class="diag-title">Diagnose</div>
+      <div class="diag-copy" id="diagnosticSummary">Noch keine Leistungsdaten. Markiere Aufgaben als verstanden oder unsicher.</div>
+    </div>
+    <div class="diag-card">
+      <div class="diag-title">Lernplan</div>
+      <div class="diag-copy" id="studyPlanSummary">Sobald Daten vorliegen, erstellt Martha eine empfohlene Reihenfolge.</div>
+    </div>
+    <div class="diag-card">
+      <div class="diag-title">Fehlerprofil</div>
+      <div class="diag-copy" id="errorProfileSummary">Noch kein Fehlerprofil vorhanden.</div>
+    </div>
+    <div class="diag-card">
+      <div class="diag-title">Wiederholung</div>
+      <div class="diag-copy" id="repetitionSummary">Martha zeigt hier die nächste fällige Wiederholung.</div>
     </div>
     <div class="fr" id="ff"></div>
   <div class="fr" id="legacyLevelFilters">
@@ -88,6 +122,10 @@
         <div class="ct" id="cht">Wähle eine Aufgabe</div>
         <div class="cs" id="chs"></div>
       </div>
+      <div class="simulation-bar" id="simulationBar" style="display:none">
+        <span class="simulation-pill" id="simulationTimer">00:00</span>
+        <button class="btn-sec simulation-exit" onclick="window._finishSimulation()">Simulation beenden</button>
+      </div>
     </div>
 
     <div class="cm" id="cms" style="display:none"></div>
@@ -95,6 +133,7 @@
       <div class="ei">👩‍🏫</div>
       <div class="et" id="welcome-title">Hallo, ich bin Martha!</div>
       <div class="ed" id="welcome-sub">Wähle links eine Aufgabe — ich erkläre dir Schritt für Schritt.</div>
+      <button class="btn-pri" style="margin-top:18px" onclick="window._openSimulationModal()">🧪 Prüfungssimulation starten</button>
     </div>
 
     <div class="qa" id="qa" style="display:none">
@@ -102,8 +141,13 @@
       <button class="qb" id="btn-step" onclick="window._quickSend(getUI().step)">👣 Erster Schritt</button>
       <button class="qb" id="btn-solpath" onclick="window._quickSend(getUI().solpath)">🧠 Lösungsweg</button>
       <button class="qb" id="btn-sol" onclick="window._quickSend(getUI().solution)">✅ Lösung</button>
+      <button class="qb" id="btn-operator-demand" onclick="window._operatorDemandHelp()" style="display:none">🧭 Was verlangt der Operator?</button>
+      <button class="qb" id="btn-operator-full" onclick="window._operatorFullCreditHelp()" style="display:none">📝 Volle-BE Antwort</button>
       <button class="qb" id="btn-plot" onclick="window._plotFromTask()" style="display:none">📈 Funktion zeichnen</button>
       <button class="qb" id="btn-practice" onclick="window._openPracticeModal()" style="display:none">🔁 Üben</button>
+      <button class="qb" id="btn-understood" onclick="window._recordTaskOutcome(true)">✔ Verstanden</button>
+      <button class="qb" id="btn-unsure" onclick="window._recordTaskOutcome(false)">✖ Unsicher</button>
+      <button class="qb" id="btn-repeat-next" onclick="window._openNextRepetitionTask()">🗂 Nächste Wiederholung</button>
     </div>
 
     <div class="ci" id="cin" style="display:none">
@@ -115,6 +159,48 @@
     </div>
   </div><!-- /.pr -->
 </div><!-- /.app -->
+
+<div id="simulationModal" class="modal-bg" style="display:none"
+     onclick="if(event.target===this)window._closeSimulationModal()">
+  <div class="modal" style="max-width:520px">
+    <div class="mh">
+      <h2>🧪 Prüfungssimulation</h2>
+      <button class="mx" onclick="window._closeSimulationModal()">✕</button>
+    </div>
+    <div class="mb">
+      <div class="gen-box" style="margin-bottom:14px">
+        Fokusmodus mit fester Blockreihenfolge, Timer und reduzierter Oberfläche. Nutzt die aktuellen NRW-Filter als Startpunkt.
+      </div>
+      <div class="sim-form">
+        <label class="sim-field">
+          <span>Niveau</span>
+          <select id="simulationLevel"></select>
+        </label>
+        <label class="sim-field">
+          <span>Thema</span>
+          <select id="simulationTopic"></select>
+        </label>
+        <label class="sim-field">
+          <span>Prüfungsteil</span>
+          <select id="simulationExamPart"></select>
+        </label>
+        <label class="sim-field">
+          <span>Werkzeug</span>
+          <select id="simulationToolMode"></select>
+        </label>
+        <label class="sim-field">
+          <span>Dauer (Min.)</span>
+          <input id="simulationDuration" type="number" min="15" step="15" value="90">
+        </label>
+      </div>
+      <div id="simulationModalHint" class="abw" style="margin-top:14px">Wähle mindestens ein Thema, damit Martha eine sinnvolle Blockfolge zusammenstellen kann.</div>
+    </div>
+    <div class="mf">
+      <button class="btn-pri" id="startSimulationConfirmBtn" onclick="window._startSimulation()">Simulation starten</button>
+      <button class="btn-sec" onclick="window._closeSimulationModal()">Abbrechen</button>
+    </div>
+  </div>
+</div>
 
 <!-- ── PRACTICE MODAL ── -->
 <div id="practiceModal" class="modal-bg" style="display:none"
@@ -415,7 +501,11 @@ const state = {
   currentToolType: "",
   selectedBlockId: "",
   selectedTaskRef: null,
+  activeSimulation: null,
+  simulationTimerId: null,
 };
+
+const appStorage = window.MarthaStorage ? window.MarthaStorage.createStorage("martha4") : null;
 
 function getActiveTask() {
   return state.selectedTaskRef || state.tasks[state.selectedIdx] || null;
@@ -441,6 +531,321 @@ function cleanTaskText(text) {
 function getPlottableTaskText(task) {
   if (!task) return "";
   return cleanTaskText(task.question || "") + "\n" + cleanTaskText(task.expected_answer || "");
+}
+
+function getOperatorGuidance(task) {
+  if (!task || !task.primaryOperator || !window.MarthaOperatoren) return null;
+  return window.MarthaOperatoren.buildOperatorGuidance(task.primaryOperator);
+}
+
+function operatorDemandPrompt(task) {
+  const guidance = getOperatorGuidance(task);
+  if (!guidance) return "";
+  return `Erkläre mir den Operator "${guidance.label}" in dieser Aufgabe. Was wird konkret erwartet und worauf muss ich achten?`;
+}
+
+function operatorFullCreditPrompt(task) {
+  const guidance = getOperatorGuidance(task);
+  if (!guidance) return "";
+  return `Zeige mir für den Operator "${guidance.label}" die Struktur einer vollen-BE-Antwort, aber löse die Aufgabe noch nicht vollständig.`;
+}
+
+function getToolModeHint(task) {
+  if (!window.MarthaToolMode) return null;
+  return window.MarthaToolMode.buildToolModeHint(task ? task.toolMode : null);
+}
+
+function buildTaskMetaBits(task) {
+  if (window.MarthaUiHelpers && typeof window.MarthaUiHelpers.buildTaskMetaBits === "function") {
+    return window.MarthaUiHelpers.buildTaskMetaBits(task);
+  }
+  return [];
+}
+
+function buildTaskNoticeMessages(task) {
+  if (window.MarthaUiHelpers && typeof window.MarthaUiHelpers.buildTaskNoticeMessages === "function") {
+    return window.MarthaUiHelpers.buildTaskNoticeMessages(task, { buildToolModeHint: getToolModeHint });
+  }
+  return [];
+}
+
+function saveSimulationState() {
+  if (!appStorage) return;
+  if (!state.activeSimulation) {
+    appStorage.remove("activeSimulation");
+    return;
+  }
+  appStorage.write("activeSimulation", state.activeSimulation);
+}
+
+function loadPerformanceEvents() {
+  return appStorage ? appStorage.read("performanceEvents", []) : [];
+}
+
+function savePerformanceEvents(events) {
+  if (!appStorage) return;
+  appStorage.write("performanceEvents", events);
+}
+
+function buildErrorProfileFromEvents(events) {
+  if (window.MarthaErrorProfile && typeof window.MarthaErrorProfile.buildErrorProfile === "function") {
+    return window.MarthaErrorProfile.buildErrorProfile(events);
+  }
+  return { topic: {}, operator: {}, toolMode: {}, examPart: {} };
+}
+
+function getRepetitionQueue(events, errorProfile) {
+  if (window.MarthaRepetition && typeof window.MarthaRepetition.buildRepetitionQueue === "function") {
+    return window.MarthaRepetition.buildRepetitionQueue({ now: Date.now(), events, errorProfile });
+  }
+  return [];
+}
+
+function describeRepetitionReason(reason) {
+  if (reason === "open-error") return "offener Fehler";
+  if (reason === "spaced-review") return "Spaced Review";
+  return "Wiederholung";
+}
+
+function openNextRepetitionTask() {
+  const queue = getRepetitionQueue(loadPerformanceEvents(), buildErrorProfileFromEvents(loadPerformanceEvents()));
+  const next = queue[0];
+  if (!next) return;
+
+  state.currentTopic = next.topic;
+  state.selectedBlockId = "";
+  state.selectedTaskRef = null;
+  applyFilters();
+
+  const firstTaskIndex = state.filtered?.items?.[0]?.taskIndexes?.[0];
+  if (typeof firstTaskIndex === "number") sel(firstTaskIndex);
+}
+
+function renderDiagnosticCards() {
+  const diagnosticEl = document.getElementById("diagnosticSummary");
+  const studyPlanEl = document.getElementById("studyPlanSummary");
+  const errorProfileEl = document.getElementById("errorProfileSummary");
+  const repetitionEl = document.getElementById("repetitionSummary");
+  const events = loadPerformanceEvents();
+
+  if (!events.length || !window.MarthaDiagnostics || !window.MarthaStudyPlan) {
+    if (diagnosticEl) diagnosticEl.textContent = "Noch keine Leistungsdaten. Markiere Aufgaben als verstanden oder unsicher.";
+    if (studyPlanEl) studyPlanEl.textContent = "Sobald Daten vorliegen, erstellt Martha eine empfohlene Reihenfolge.";
+    if (errorProfileEl) errorProfileEl.textContent = "Noch kein Fehlerprofil vorhanden.";
+    if (repetitionEl) repetitionEl.textContent = "Sobald Daten vorliegen, plant Martha Wiederholungen.";
+    return;
+  }
+
+  const readiness = window.MarthaDiagnostics.summarizeReadiness(events);
+  const errorProfile = buildErrorProfileFromEvents(events);
+  const plan = window.MarthaStudyPlan.buildStudyPlan({ readiness, errorProfile });
+  const repetitionQueue = getRepetitionQueue(events, errorProfile);
+  const recovery = window.MarthaErrorProfile && typeof window.MarthaErrorProfile.buildRecoverySummary === "function"
+    ? window.MarthaErrorProfile.buildRecoverySummary(errorProfile)
+    : { openTotal: 0, recoveredTotal: 0, recoveryRate: 0 };
+
+  const weakestTopic = Object.entries(readiness.topics).sort((a, b) => a[1].successRate - b[1].successRate)[0];
+  const weakestOperator = Object.entries(readiness.operators).sort((a, b) => a[1].successRate - b[1].successRate)[0];
+
+  if (diagnosticEl) {
+    diagnosticEl.textContent = weakestTopic
+      ? `Schwächstes Thema: ${weakestTopic[0]} (${Math.round(weakestTopic[1].successRate * 100)}%). Schwächster Operator: ${weakestOperator ? weakestOperator[0] : "—"}.`
+      : "Noch zu wenig Daten für eine Diagnose.";
+  }
+
+  if (studyPlanEl) {
+    const lines = (plan.sessions || [])
+      .map((session, index) => {
+        const focus = session.focus?.topic || session.focus?.operator || "Grundlagen";
+        return `${index + 1}. ${session.type}: ${focus}`;
+      })
+      .join(" ");
+    studyPlanEl.textContent = lines || "Noch kein Lernplan verfügbar.";
+  }
+
+  if (errorProfileEl) {
+    errorProfileEl.textContent = recovery.openTotal
+      ? `${recovery.openTotal} offene Fehler, ${recovery.recoveredTotal} aufgearbeitet. Recovery-Rate: ${Math.round(recovery.recoveryRate * 100)}%.`
+      : "Aktuell keine offenen Fehler. Martha hält das Niveau mit geplanten Wiederholungen.";
+  }
+
+  if (repetitionEl) {
+    const next = repetitionQueue[0];
+    repetitionEl.textContent = next
+      ? `Nächste Wiederholung: ${next.topic} (${describeRepetitionReason(next.reason)}).`
+      : "Keine Wiederholung fällig. Neue Fehler landen automatisch in der Review-Warteschlange.";
+  }
+}
+
+function recordTaskOutcome(success) {
+  const task = getActiveTask();
+  if (!task) return;
+  const events = loadPerformanceEvents();
+  events.push({
+    topic: task.topic || null,
+    operator: task.primaryOperator || null,
+    toolMode: task.toolMode || null,
+    examPart: task.examPart || null,
+    success: Boolean(success),
+    timestamp: Date.now(),
+  });
+  savePerformanceEvents(events);
+  renderDiagnosticCards();
+}
+
+function getSimulationViewFromSelection(selection) {
+  if (!window.MarthaTaskNav || !state.taskIndex) return null;
+  return window.MarthaTaskNav.getVisibleItems(state.taskIndex, selection);
+}
+
+function setSelectOptions(select, items, selectedValue, includeEmptyLabel) {
+  if (!select) return;
+  const options = [];
+  if (includeEmptyLabel) options.push(`<option value="">${includeEmptyLabel}</option>`);
+  items.forEach((item) => {
+    const value = typeof item === "string" ? item : item.id;
+    const label = typeof item === "string" ? item : item.label;
+    options.push(`<option value="${esc(value)}"${value === selectedValue ? " selected" : ""}>${esc(label)}</option>`);
+  });
+  select.innerHTML = options.join("");
+}
+
+function updateSimulationTimer() {
+  const bar = document.getElementById("simulationBar");
+  const timer = document.getElementById("simulationTimer");
+  if (!bar || !timer) return;
+  if (!state.activeSimulation || !window.MarthaSimulation) {
+    bar.style.display = "none";
+    return;
+  }
+  const remaining = window.MarthaSimulation.getRemainingMs(state.activeSimulation);
+  timer.textContent = window.MarthaSimulation.formatRemainingTime(remaining);
+  bar.style.display = "flex";
+  if (window.MarthaSimulation.isSimulationExpired(state.activeSimulation)) {
+    finishSimulation(true);
+  }
+}
+
+function applySimulationMode(isActive) {
+  document.body.classList.toggle("simulation-mode", Boolean(isActive));
+  updateSimulationTimer();
+}
+
+function syncSimulationTaskSelection() {
+  if (!state.activeSimulation) return;
+  const activeId = String(state.selectedIdx);
+  if (state.activeSimulation.taskIds.includes(activeId)) return;
+  const firstId = state.activeSimulation.taskIds[0];
+  if (firstId != null) sel(Number(firstId));
+}
+
+function populateSimulationModal() {
+  const levelSelect = document.getElementById("simulationLevel");
+  const topicSelect = document.getElementById("simulationTopic");
+  const examPartSelect = document.getElementById("simulationExamPart");
+  const toolSelect = document.getElementById("simulationToolMode");
+  const hint = document.getElementById("simulationModalHint");
+  if (!state.taskIndex || !window.MarthaTaskNav) return;
+
+  const levels = state.taskIndex.levels.map((item) => ({ id: item.id, label: item.label }));
+  setSelectOptions(levelSelect, levels, state.levelFilter === "all" ? "" : state.levelFilter, "Aktuelle Auswahl");
+
+  const selectedLevel = levelSelect.value || (state.levelFilter === "all" ? "" : state.levelFilter);
+  const topicSource = selectedLevel
+    ? (state.taskIndex.levels.find((item) => item.id === selectedLevel)?.topics || [])
+    : state.taskIndex.levels.flatMap((item) => item.topics);
+  const uniqueTopics = Array.from(new Map(topicSource.map((item) => [item.id, { id: item.id, label: item.label }])).values());
+  setSelectOptions(topicSelect, uniqueTopics, state.currentTopic || "", "Thema wählen");
+
+  const view = getSimulationViewFromSelection({
+    level: selectedLevel,
+    topic: topicSelect.value || state.currentTopic,
+    year: state.currentYear,
+    examPart: "",
+    taskType: "",
+    toolType: "",
+  });
+  const filters = view && view.filters ? view.filters : {};
+  setSelectOptions(examPartSelect, (filters.examParts || []).filter((item) => item.id), state.currentExamPart || "", "Alle Prüfungsteile");
+  setSelectOptions(toolSelect, (filters.toolTypes || []).filter((item) => item.id), state.currentToolType || "", "Alle Werkzeuge");
+  if (hint) hint.textContent = topicSelect.value ? "Martha nimmt die sichtbaren Aufgabenblöcke dieses Filters in fester Reihenfolge." : "Wähle mindestens ein Thema, damit Martha eine sinnvolle Blockfolge zusammenstellen kann.";
+}
+
+function openSimulationModal() {
+  populateSimulationModal();
+  document.getElementById("simulationModal").style.display = "flex";
+}
+
+function closeSimulationModal() {
+  document.getElementById("simulationModal").style.display = "none";
+}
+
+function startSimulation() {
+  if (!window.MarthaSimulation) return;
+  const level = document.getElementById("simulationLevel").value || (state.levelFilter === "all" ? "" : state.levelFilter);
+  const topic = document.getElementById("simulationTopic").value;
+  const examPart = document.getElementById("simulationExamPart").value;
+  const toolType = document.getElementById("simulationToolMode").value;
+  const durationMinutes = Math.max(15, Number(document.getElementById("simulationDuration").value || 90));
+  const hint = document.getElementById("simulationModalHint");
+  const selection = { level, topic, year: state.currentYear, examPart, taskType: "", toolType };
+  const view = getSimulationViewFromSelection(selection);
+  const taskIndexes = window.MarthaSimulation.buildSimulationTaskIndexes(view);
+
+  if (!topic || !taskIndexes.length) {
+    if (hint) hint.textContent = "Für diese Auswahl wurden keine Aufgabenblöcke gefunden. Wähle ein Thema mit sichtbaren Aufgaben.";
+    return;
+  }
+
+  state.levelFilter = level || "all";
+  state.currentTopic = topic;
+  state.currentExamPart = examPart;
+  state.currentToolType = toolType;
+  state.selectedBlockId = "";
+  state.selectedTaskRef = null;
+  applyFilters();
+
+  state.activeSimulation = window.MarthaSimulation.createSimulationRun({
+    taskIds: taskIndexes.map((value) => String(value)),
+    durationMinutes,
+    context: selection,
+  });
+  saveSimulationState();
+  if (state.simulationTimerId) clearInterval(state.simulationTimerId);
+  state.simulationTimerId = setInterval(updateSimulationTimer, 1000);
+  applySimulationMode(true);
+  closeSimulationModal();
+  sel(taskIndexes[0]);
+}
+
+function finishSimulation(expired = false) {
+  if (state.simulationTimerId) {
+    clearInterval(state.simulationTimerId);
+    state.simulationTimerId = null;
+  }
+  state.activeSimulation = null;
+  saveSimulationState();
+  applySimulationMode(false);
+  if (expired) {
+    const cms = document.getElementById("cms");
+    if (cms) {
+      cms.innerHTML += '<div class="mg a"><div class="bu"><div class="sn">MARTHA</div>Die Simulation ist abgelaufen. Sichere jetzt deinen Stand und starte danach die Auswertung.</div></div>';
+    }
+  }
+}
+
+function restoreSimulationIfPresent() {
+  if (!appStorage || !window.MarthaSimulation) return;
+  const saved = appStorage.read("activeSimulation");
+  if (!saved) return;
+  if (window.MarthaSimulation.isSimulationExpired(saved)) {
+    appStorage.remove("activeSimulation");
+    return;
+  }
+  state.activeSimulation = saved;
+  applySimulationMode(true);
+  if (state.simulationTimerId) clearInterval(state.simulationTimerId);
+  state.simulationTimerId = setInterval(updateSimulationTimer, 1000);
 }
 
 
@@ -862,6 +1267,92 @@ async function callGroq({ systemPrompt, userPrompt, temperature = 0.7, maxTokens
   return data.choices?.[0]?.message?.content || "";
 }
 
+function buildConversationSnippet(messages = []) {
+  return messages
+    .slice(-6)
+    .map((entry) => `${entry.role === "assistant" ? "MARTHA" : "SCHUELER"}: ${entry.content}`)
+    .join("\n");
+}
+
+async function generateValidatedTeacherReply({ task, messages, onStatus }) {
+  const latestUserMessage = [...(messages || [])].reverse().find((entry) => entry.role === "user")?.content || "";
+  const taskContext = buildContext(task);
+  const conversation = buildConversationSnippet(messages);
+  const styleApi = window.MarthaSolutionStyle || {};
+  const guardApi = window.MarthaSolutionGuards || {};
+  const validatorApi = window.MarthaSolutionValidator || {};
+
+  const updateStatus = (text) => { if (typeof onStatus === "function") onStatus(text); };
+
+  updateStatus("Martha erstellt eine saubere Lehrerloesung ...");
+  let candidate = await callGroq({
+    systemPrompt: styleApi.buildTeacherSystemPrompt ? styleApi.buildTeacherSystemPrompt(task) : getSystemPrompt(),
+    userPrompt: styleApi.buildDraftPrompt
+      ? styleApi.buildDraftPrompt({ taskContext, conversation, latestUserMessage })
+      : latestUserMessage,
+    temperature: 0.2,
+    maxTokens: 1400,
+  });
+
+  let localCheck = guardApi.evaluateDraft ? guardApi.evaluateDraft({ task, draft: candidate }) : { ok: true, issues: [] };
+
+  updateStatus("Martha validiert die Loesung ...");
+  const validationRaw = await callGroq({
+    systemPrompt: validatorApi.getValidatorSystemPrompt ? validatorApi.getValidatorSystemPrompt() : "Antworte nur als JSON.",
+    userPrompt: validatorApi.buildValidationPrompt
+      ? validatorApi.buildValidationPrompt({ taskContext, draft: candidate })
+      : candidate,
+    temperature: 0,
+    maxTokens: 700,
+  });
+  const validation = validatorApi.parseValidationResult
+    ? validatorApi.parseValidationResult(validationRaw)
+    : { valid: true, confidence: 1, issues: [], correctedAnswer: "", shouldRepair: false };
+
+  if ((!localCheck.ok || !validation.valid || validation.shouldRepair) && styleApi.buildRepairPrompt) {
+    updateStatus("Martha ueberarbeitet die Loesung ...");
+    const repairIssues = [
+      ...(localCheck.issues || []),
+      ...(validation.issues || []),
+    ];
+    const repaired = await callGroq({
+      systemPrompt: styleApi.buildTeacherSystemPrompt ? styleApi.buildTeacherSystemPrompt(task) : getSystemPrompt(),
+      userPrompt: styleApi.buildRepairPrompt({
+        taskContext,
+        latestUserMessage,
+        draft: validation.correctedAnswer || candidate,
+        issues: repairIssues,
+      }),
+      temperature: 0.15,
+      maxTokens: 1400,
+    });
+
+    const repairedCheck = guardApi.evaluateDraft ? guardApi.evaluateDraft({ task, draft: repaired }) : { ok: true, issues: [] };
+    if (repairedCheck.ok) {
+      candidate = repaired;
+      localCheck = repairedCheck;
+    } else if (validation.correctedAnswer) {
+      const correctedCheck = guardApi.evaluateDraft ? guardApi.evaluateDraft({ task, draft: validation.correctedAnswer }) : { ok: false, issues: [] };
+      if (correctedCheck.ok) {
+        candidate = validation.correctedAnswer;
+        localCheck = correctedCheck;
+      }
+    }
+  }
+
+  if (!localCheck.ok) {
+    const issueLabel = (localCheck.issues || []).map((issue) => issue.message).join(" ");
+    return [
+      "Ich bleibe hier bewusst vorsichtig, damit keine falsche Mathe-Aussage stehen bleibt.",
+      "Sicher ist bereits:",
+      validation.correctedAnswer || candidate,
+      issueLabel ? `Noch offen zur Nachpruefung: ${issueLabel}` : "",
+    ].filter(Boolean).join("\n\n");
+  }
+
+  return candidate;
+}
+
 /** Streaming call for upload/photo analysis — returns full text */
 async function streamToElement({ systemPrompt, userContent, model, targetEl, temperature = 0.1, maxTokens = 1000 }) {
   const messages = [
@@ -916,6 +1407,9 @@ async function init() {
     document.getElementById("st").textContent = getUI().ready + " · " + CONFIG.MODEL;
     renderFilters();
     applyFilters();
+    renderDiagnosticCards();
+    restoreSimulationIfPresent();
+    syncSimulationTaskSelection();
   } catch (_) {
     document.getElementById("st").textContent = "Fehler: tasks.json nicht gefunden";
   }
@@ -994,6 +1488,7 @@ function applyFilters() {
   });
   renderFilters();
   renderTaskList();
+  if (state.activeSimulation) syncSimulationTaskSelection();
 }
 
 function topicClass(topic) {
@@ -1164,7 +1659,7 @@ function sel(i) {
   const t = getActiveTask(), sr = (t && t.source) || {};
   if (!t) return;
   document.getElementById('cht').textContent = t.task_id || 'Aufgabe';
-  const metaBits = [t.topic || '', sr.level || '', sr.year || '', t.examPart || '', t.taskType || '', t.toolType || ''].filter(Boolean);
+  const metaBits = buildTaskMetaBits(t);
   document.getElementById('chs').textContent = metaBits.join(' \u00b7 ') + (t.points ? ' \u00b7 ' + t.points + ' BE' : '');
   document.getElementById('cin').style.display = 'flex';
   document.getElementById('qa').style.display = 'flex';
@@ -1174,6 +1669,9 @@ function sel(i) {
   if (welcome) welcome.style.display = 'none';
   if (cms) cms.style.display = 'block';
   const funcs = extractFunctions(getPlottableTaskText(t));
+  const operatorGuidance = getOperatorGuidance(t);
+  document.getElementById('btn-operator-demand').style.display = operatorGuidance ? 'inline-block' : 'none';
+  document.getElementById('btn-operator-full').style.display = operatorGuidance ? 'inline-block' : 'none';
   document.getElementById('btn-plot').style.display = funcs.length ? 'inline-block' : 'none';
   document.getElementById('btn-practice').style.display = t.isSyntheticBlock ? 'none' : 'inline-block';
   const historyKey = getActiveHistoryKey();
@@ -1211,10 +1709,9 @@ async function renderChat(i) {
   taskBubbleDiv.appendChild(taskBubbleInner);
 
   let html = '';
-  const q = (t.question || '').toLowerCase();
-  if (q.includes('abbildung') || q.includes('dargestellt') || q.includes('histogramm')) {
-    html += '<div class="abw">\u26a0\ufe0f Diese Aufgabe enthält eine Abbildung. Prüfe die Grafik im Original sorgfältig mit.</div>';
-  }
+  buildTaskNoticeMessages(t).forEach((notice) => {
+    html += '<div class="abw">' + esc(notice.icon + ' ' + notice.message) + '</div>';
+  });
   if (!h.length) {
     html += '<div class="mg a"><div class="bu"><div class="sn">MARTHA</div>' + esc(getUI().greeting) + '</div></div>';
   }
@@ -1272,6 +1769,18 @@ function plotFromTask() {
 
 function quickSend(text) { document.getElementById('mi').value = text; sendMessage(); }
 
+function operatorDemandHelp() {
+  const task = getActiveTask();
+  const prompt = operatorDemandPrompt(task);
+  if (prompt) quickSend(prompt);
+}
+
+function operatorFullCreditHelp() {
+  const task = getActiveTask();
+  const prompt = operatorFullCreditPrompt(task);
+  if (prompt) quickSend(prompt);
+}
+
 async function sendMessage() {
   if (state.streaming || state.selectedIdx < 0) return;
   const inp = document.getElementById('mi');
@@ -1286,6 +1795,10 @@ async function sendMessage() {
   const i = state.selectedIdx;
   const historyKey = getActiveHistoryKey();
   if (!state.history[historyKey]) state.history[historyKey] = [];
+  if (state.activeSimulation && window.MarthaSimulation) {
+    window.MarthaSimulation.recordSimulationAnswer(state.activeSimulation, historyKey, txt);
+    saveSimulationState();
+  }
   state.history[historyKey].push({role:'user', content:txt});
   const el = document.getElementById('cms');
   el.innerHTML += '<div class="mg u"><div class="bu">' + esc(txt) + '</div></div>';
@@ -1295,12 +1808,16 @@ async function sendMessage() {
   state.streaming = true;
   document.getElementById('sbt').disabled = true;
   let full = '';
-  const ctx = buildContext(getActiveTask());
   const atEl = document.querySelector('#' + tid + ' .at');
   try {
-    for await (const token of streamGroq(state.history[historyKey], ctx)) {
-      full += token; atEl.textContent = full; el.scrollTop = el.scrollHeight;
-    }
+    full = await generateValidatedTeacherReply({
+      task: getActiveTask(),
+      messages: state.history[historyKey],
+      onStatus: (statusText) => {
+        atEl.textContent = statusText;
+        el.scrollTop = el.scrollHeight;
+      },
+    });
   } catch(ex) { full = full || 'Verbindungsfehler: ' + ex.message; }
   if (full) {
     state.history[historyKey].push({role:'assistant', content:full});
@@ -1324,6 +1841,14 @@ window._goBack = goBack;
 window._plotFromTask = plotFromTask;
 window._quickSend = quickSend;
 window._sendMessage = sendMessage;
+window._operatorDemandHelp = operatorDemandHelp;
+window._operatorFullCreditHelp = operatorFullCreditHelp;
+window._openSimulationModal = openSimulationModal;
+window._closeSimulationModal = closeSimulationModal;
+window._startSimulation = startSimulation;
+window._finishSimulation = finishSimulation;
+window._recordTaskOutcome = recordTaskOutcome;
+window._openNextRepetitionTask = openNextRepetitionTask;
 window._handleKeydown = handleKeydown;
 window._autoGrow = autoGrow;
 

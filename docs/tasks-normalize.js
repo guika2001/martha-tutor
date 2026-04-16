@@ -1,4 +1,27 @@
 (function (root) {
+  const operatorApi = typeof module !== "undefined" && module.exports
+    ? require("./operatoren.js")
+    : root && root.MarthaOperatoren
+      ? root.MarthaOperatoren
+      : null;
+  const toolModeApi = typeof module !== "undefined" && module.exports
+    ? require("./tool-mode.js")
+    : root && root.MarthaToolMode
+      ? root.MarthaToolMode
+      : null;
+
+  function detectOperators(text) {
+    return operatorApi && typeof operatorApi.detectOperators === "function"
+      ? operatorApi.detectOperators(text)
+      : [];
+  }
+
+  function normalizeToolMode(value) {
+    return toolModeApi && typeof toolModeApi.normalizeToolMode === "function"
+      ? toolModeApi.normalizeToolMode(value)
+      : null;
+  }
+
   function cleanText(value, fallback) {
     const text = String(value || "").trim();
     return text || fallback;
@@ -67,6 +90,27 @@
     const plain = sanitizeTitleText(stripTaskLeadIn(text));
     const match = plain.match(/([fgh]\s*\(\s*x\s*\)\s*=\s*[^.\n,;]{3,80})/i);
     return match ? match[1].replace(/\s+/g, " ").trim() : "";
+  }
+
+  function detectFigureMeta(text) {
+    const plain = normalizeWhitespace(text || "");
+    const lower = plain.toLowerCase();
+    const labelMatch = plain.match(/\b(Abbildung\s+\d+)\b/i);
+    const genericFigure = /\b(abbildung|grafik|skizze|histogramm|diagramm)\b/i.test(plain);
+    if (!genericFigure && !labelMatch) {
+      return {
+        figureRequired: false,
+        figureLabel: "",
+        figureSource: "unknown",
+        figureStatus: "present",
+      };
+    }
+    return {
+      figureRequired: true,
+      figureLabel: labelMatch ? labelMatch[1] : (lower.includes("grafik") ? "Grafik" : lower.includes("skizze") ? "Skizze" : "Abbildung"),
+      figureSource: "task",
+      figureStatus: "missing",
+    };
   }
 
   function buildBlockDisplayLabel(tasks, fallback) {
@@ -226,6 +270,13 @@
       block.tasks.push(task);
       block.points += Number(task.points || 0);
       if (block.taskIndexes.length === 1) block.representativeIndex = taskIndex;
+      const figureMeta = detectFigureMeta(task.question || "");
+      if (figureMeta.figureRequired) {
+        block.figureRequired = true;
+        block.figureLabel = block.figureLabel || figureMeta.figureLabel;
+        block.figureSource = figureMeta.figureSource;
+        block.figureStatus = "missing";
+      }
       blockByTaskIndex[taskIndex] = blockId;
     });
 
@@ -397,6 +448,7 @@
     const tasks = block && block.tasks ? block.tasks : [];
     const question = buildCombinedText(tasks, "question");
     const expected = buildCombinedText(tasks.filter((task) => task.expected_answer), "expected_answer");
+    const operators = detectOperators(question + "\n" + expected);
     return {
       task_id: block.displayLabel || block.label,
       topic: block.topic,
@@ -408,6 +460,13 @@
       examPart: block.examPart,
       taskType: block.taskType,
       toolType: block.toolType,
+      toolMode: normalizeToolMode(block.toolType),
+      operators,
+      primaryOperator: operators[0] || null,
+      figureRequired: Boolean(block.figureRequired),
+      figureLabel: block.figureLabel || "",
+      figureSource: block.figureSource || "unknown",
+      figureStatus: block.figureRequired ? (block.figureStatus || "missing") : "present",
       variantLabel: block.variantLabel,
       isSyntheticBlock: true,
     };
