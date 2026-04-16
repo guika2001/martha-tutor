@@ -81,20 +81,57 @@
     };
   }
 
-  async function renderPageToCanvas(sourceHref, pageNumber, canvas) {
+  function normalizeTextItems(items) {
+    return (items || []).map((item) => {
+      const transform = item.transform || [1, 0, 0, 1, 0, 0];
+      return {
+        str: item.str || "",
+        x: Number(transform[4] || 0),
+        y: Number(transform[5] || 0),
+        width: Number(item.width || 0),
+        height: Number(item.height || Math.abs(transform[3] || 0)),
+      };
+    });
+  }
+
+  function findFigureAnchor(items, figureLabel) {
+    const wanted = normalizeToken(figureLabel || "");
+    if (!wanted) return null;
+    return normalizeTextItems(items).find((item) => normalizeToken(item.str).includes(wanted)) || null;
+  }
+
+  function deriveFigureCropBox({ pageWidth, pageHeight, anchor, topic }) {
+    if (!anchor || !pageWidth || !pageHeight) return null;
+    const topicKey = String(topic || "").toLowerCase();
+    const widthRatio = topicKey.includes("geometrie") ? 0.42 : 0.36;
+    const heightRatio = topicKey.includes("geometrie") ? 0.5 : 0.46;
+    const left = Math.max(0, Math.min(pageWidth - (pageWidth * widthRatio), anchor.x - pageWidth * 0.16));
+    const bottom = Math.max(0, anchor.y - pageHeight * 0.06);
+    const width = Math.min(pageWidth - left, pageWidth * widthRatio);
+    const height = Math.min(pageHeight - bottom, pageHeight * heightRatio);
+    return { x: left, y: bottom, width, height };
+  }
+
+  async function renderPageToCanvas(sourceHref, pageNumber, canvas, cropBox = null) {
     const pdf = await openPdf(sourceHref);
     const page = await pdf.getPage(pageNumber);
-    const viewport = page.getViewport({ scale: 1.1 });
+    const viewport = page.getViewport({ scale: 1.25 });
     const ratio = root.devicePixelRatio || 1;
-    canvas.width = Math.floor(viewport.width * ratio);
-    canvas.height = Math.floor(viewport.height * ratio);
-    canvas.style.width = Math.floor(viewport.width) + "px";
-    canvas.style.height = Math.floor(viewport.height) + "px";
+    const renderViewport = cropBox
+      ? page.getViewport({ scale: 1.25, offsetX: -cropBox.x * 1.25, offsetY: -cropBox.y * 1.25 })
+      : viewport;
+    const targetWidth = cropBox ? cropBox.width * 1.25 : viewport.width;
+    const targetHeight = cropBox ? cropBox.height * 1.25 : viewport.height;
+    canvas.width = Math.floor(targetWidth * ratio);
+    canvas.height = Math.floor(targetHeight * ratio);
+    canvas.style.width = Math.floor(targetWidth) + "px";
+    canvas.style.height = Math.floor(targetHeight) + "px";
     const ctx = canvas.getContext("2d");
     ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    ctx.clearRect(0, 0, targetWidth, targetHeight);
     await page.render({
       canvasContext: ctx,
-      viewport,
+      viewport: renderViewport,
     }).promise;
   }
 
@@ -116,12 +153,22 @@
     try {
       const validation = await findBestPage(task, primary);
       const targetPage = validation.pageNumber || 1;
-      await renderPageToCanvas(primary.href, targetPage, canvas);
+      const pdf = await openPdf(primary.href);
+      const page = await pdf.getPage(targetPage);
+      const textContent = await page.getTextContent();
+      const anchor = findFigureAnchor(textContent.items, task && task.figureLabel);
+      const cropBox = deriveFigureCropBox({
+        pageWidth: page.view[2],
+        pageHeight: page.view[3],
+        anchor,
+        topic: task && task.topic,
+      });
+      await renderPageToCanvas(primary.href, targetPage, canvas, cropBox);
       container.dataset.status = validation.ok
-        ? `PDF-Quelle validiert · Seite ${targetPage}`
+        ? `PDF-Quelle validiert · Seite ${targetPage}${cropBox ? " · Ausschnitt" : ""}`
         : `PDF geladen · Seite ${targetPage} als Vorschau`;
       status.textContent = validation.ok
-        ? `${primary.label} validiert auf Seite ${targetPage}.`
+        ? `${primary.label} validiert auf Seite ${targetPage}${cropBox ? " (Abbildungsausschnitt)." : "."}`
         : `${primary.label} geladen. Seitenvorschau ohne eindeutigen Abbildungs-Treffer.`;
       const footer = doc.createElement("a");
       footer.className = "pdf-open-link";
@@ -144,6 +191,8 @@
 
   const api = {
     findBestPage,
+    findFigureAnchor,
+    deriveFigureCropBox,
     renderFigurePreview,
   };
 
