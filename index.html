@@ -17,6 +17,7 @@
 <script src="study-plan.js"></script>
 <script src="error-profile.js"></script>
 <script src="repetition.js"></script>
+<script src="chat-dom.js"></script>
 <script src="analysis-guards.js"></script>
 <script src="stochastik-guards.js"></script>
 <script src="vector-guards.js"></script>
@@ -2019,18 +2020,11 @@ async function renderChat(i) {
   taskBubbleInner.appendChild(taskText);
   taskBubbleDiv.appendChild(taskBubbleInner);
 
-  let taskHost = el.querySelector('.task-context-host');
-  let messagesHost = el.querySelector('.chat-history-host');
-  if (!taskHost) {
-    taskHost = document.createElement('div');
-    taskHost.className = 'task-context-host';
-    el.appendChild(taskHost);
-  }
-  if (!messagesHost) {
-    messagesHost = document.createElement('div');
-    messagesHost.className = 'chat-history-host';
-    el.appendChild(messagesHost);
-  }
+  const hosts = window.MarthaChatDom && typeof window.MarthaChatDom.getChatHosts === "function"
+    ? window.MarthaChatDom.getChatHosts(el, document)
+    : { taskHost: el.querySelector('.task-context-host'), messagesHost: el.querySelector('.chat-history-host') };
+  let taskHost = hosts.taskHost;
+  let messagesHost = hosts.messagesHost;
 
   const taskRenderKey = window.MarthaChatContext && typeof window.MarthaChatContext.buildTaskRenderKey === "function"
     ? window.MarthaChatContext.buildTaskRenderKey({
@@ -2106,6 +2100,10 @@ function plotFromTask() {
   if (!t) return;
   const funcs = extractFunctions(getPlottableTaskText(t));
   const el = document.getElementById('cms');
+  const hosts = window.MarthaChatDom && typeof window.MarthaChatDom.getChatHosts === "function"
+    ? window.MarthaChatDom.getChatHosts(el, document)
+    : { taskHost: null, messagesHost: el };
+  const messagesHost = hosts.messagesHost || el;
   if (!funcs.length) { quickSend(getUI().plot); return; }
   funcs.forEach(f => {
     const msgDiv = document.createElement('div'); msgDiv.className = 'mg a';
@@ -2120,7 +2118,7 @@ function plotFromTask() {
     const [xmin, xmax] = guessRange(f.expr);
     const pw = document.createElement('div'); bu.appendChild(pw);
     try { drawPlot(f.expr, xmin, xmax, pw); } catch(ex) { pw.textContent = 'Error: ' + ex.message; }
-    el.appendChild(msgDiv);
+    messagesHost.appendChild(msgDiv);
   });
   el.scrollTop = el.scrollHeight;
 }
@@ -2165,9 +2163,13 @@ async function sendMessage() {
   }
   state.history[historyKey].push({role:'user', content:txt});
   const el = document.getElementById('cms');
-  el.innerHTML += '<div class="mg u"><div class="bu">' + esc(txt) + '</div></div>';
+  const hosts = window.MarthaChatDom && typeof window.MarthaChatDom.getChatHosts === "function"
+    ? window.MarthaChatDom.getChatHosts(el, document)
+    : { taskHost: null, messagesHost: el };
+  const messagesHost = hosts.messagesHost || el;
+  messagesHost.innerHTML += '<div class="mg u"><div class="bu">' + esc(txt) + '</div></div>';
   const tid = 't' + Date.now();
-  el.innerHTML += '<div class="mg a" id="' + tid + '"><div class="bu"><div class="sn">MARTHA</div><span class="at"><span class="tp"><span></span><span></span><span></span></span></span></div></div>';
+  messagesHost.innerHTML += '<div class="mg a" id="' + tid + '"><div class="bu"><div class="sn">MARTHA</div><span class="at"><span class="tp"><span></span><span></span><span></span></span></span></div></div>';
   el.scrollTop = el.scrollHeight;
   state.streaming = true;
   document.getElementById('sbt').disabled = true;
