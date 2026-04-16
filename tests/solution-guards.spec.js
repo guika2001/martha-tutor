@@ -34,7 +34,7 @@ describe("solution guards", () => {
         question: "Der Graph ist in Abbildung 1 dargestellt.",
         figureRequired: true,
         figureLabel: "Abbildung 1",
-        figureStatus: "missing",
+        figureStatus: "referenced",
       },
       draft: "Aus der Abbildung erkennt man eindeutig, dass der Hochpunkt bei x=2 liegt.",
     });

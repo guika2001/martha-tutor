@@ -68,11 +68,11 @@
       }
     }
 
-    if (task && task.figureRequired && task.figureStatus === "missing" && FIGURE_ASSERTION_PATTERNS.some((pattern) => pattern.test(text))) {
+    if (task && task.figureRequired && task.figureStatus !== "present" && FIGURE_ASSERTION_PATTERNS.some((pattern) => pattern.test(text))) {
       issues.push({
         code: "missing-figure-reference",
         severity: "blocking",
-        message: `${task.figureLabel || "Abbildung"} fehlt. Aussagen aus der Grafik dürfen nicht sicher behauptet werden.`,
+        message: `${task.figureLabel || "Abbildung"} ist im aktuellen Arbeitsbereich nicht sichtbar. Aussagen aus der Grafik dürfen nicht sicher behauptet werden.`,
       });
     }
 

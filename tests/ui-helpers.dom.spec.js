@@ -33,7 +33,7 @@ describe("ui helpers", () => {
         question: "Der Graph ist in Abbildung 1 dargestellt.",
         figureRequired: true,
         figureLabel: "Abbildung 1",
-        figureStatus: "missing",
+        figureStatus: "referenced",
       },
       { buildToolModeHint }
     );
@@ -42,6 +42,6 @@ describe("ui helpers", () => {
 
     expect(screen.getByText(/CAS\/MMS:/)).toBeInTheDocument();
     expect(screen.getByText(/Abbildung 1 erforderlich/)).toBeInTheDocument();
-    expect(screen.getByText(/PDF-Abbildung fehlt/)).toBeInTheDocument();
+    expect(screen.getByText(/Originalabbildung in der Quelle öffnen/)).toBeInTheDocument();
   });
 });

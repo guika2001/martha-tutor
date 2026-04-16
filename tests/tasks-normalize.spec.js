@@ -14,6 +14,8 @@ describe("task navigator normalization", () => {
     { task_id: "Aufgabe a) (1)", topic: "Stochastik", question: "Löse folgende Aufgabe aus dem NRW Abitur 2025-Beispiel (Mathematik, LK):\n\nBegründen Sie, dass die gegebene Wahrscheinlichkeit sinnvoll ist.\n\nQ4", expected_answer: "A4", source: { level: "LK", year: "2025-Beispiel" }, points: 2 },
     { task_id: "Aufgabe a) (2)", topic: "Stochastik", question: "Löse folgende Aufgabe aus dem NRW Abitur 2025-Beispiel (Mathematik, LK):\n\nBegründen Sie, dass die gegebene Wahrscheinlichkeit sinnvoll ist.\n\nQ5", expected_answer: "A5", source: { level: "LK", year: "2025-Beispiel" }, points: 4 },
     { task_id: "Aufgabe b)", topic: "Stochastik", question: "Löse folgende Aufgabe aus dem NRW Abitur 2025-Beispiel (Mathematik, GK):\n\nDer Graph der Funktion f ist in Abbildung 1 dargestellt.\nBerechnen Sie den Flächeninhalt.", expected_answer: "", source: { level: "GK", year: "2025-Beispiel" }, points: 3 },
+    { task_id: "Wahlpflichtaufgabe 1a", topic: "Lineare Algebra", question: "Ermitteln Sie die Lösungsmenge des linearen Gleichungssystems: 10x + 2y - 5z = 6, -2x + 3z = 8, 4x - 2y + 3z = 4.", expected_answer: "", source: { level: "GK", year: "2025-Beispiel" }, points: 2 },
+    { task_id: "Wahlpflichtaufgabe 1a", topic: "Lineare Algebra", question: "Ermitteln Sie die Lösungsmenge des linearen Gleichungssystems: 10x + 2y - 5z = 6, -2x + 3z = 8, 4x - 2y + 3z = 4.", expected_answer: "", source: { level: "GK", year: "2025-Beispiel" }, points: 2 },
   ];
 
   it("keeps level groups separate", () => {
@@ -75,6 +77,15 @@ describe("task navigator normalization", () => {
 
     expect(synthetic.figureRequired).toBe(true);
     expect(synthetic.figureLabel).toBe("Abbildung 1");
-    expect(synthetic.figureStatus).toBe("missing");
+    expect(synthetic.figureStatus).toBe("referenced");
+  });
+
+  it("deduplicates identical tasks inside one block", () => {
+    const index = buildTaskIndex(sampleTasks);
+    const block = getVisibleItems(index, { level: "GK", year: "2025-Beispiel", topic: "Lineare Algebra" }).items[0];
+    const synthetic = buildCombinedTask(block);
+
+    expect(block.taskIndexes).toHaveLength(1);
+    expect(synthetic.question.match(/Teil /g) || []).toHaveLength(1);
   });
 });

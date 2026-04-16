@@ -109,7 +109,7 @@
       figureRequired: true,
       figureLabel: labelMatch ? labelMatch[1] : (lower.includes("grafik") ? "Grafik" : lower.includes("skizze") ? "Skizze" : "Abbildung"),
       figureSource: "task",
-      figureStatus: "missing",
+      figureStatus: "referenced",
     };
   }
 
@@ -261,11 +261,18 @@
           taskType: meta.taskType,
           toolType: meta.toolType,
           variantLabel,
+          dedupeKeys: new Set(),
         });
         topicNode.blocks.push(topicNode.blockMap.get(blockId));
       }
 
       const block = topicNode.blockMap.get(blockId);
+      const dedupeKey = canonicalizeForGrouping(task.question || "") + "::" + canonicalizeForGrouping(task.expected_answer || "");
+      if (block.dedupeKeys.has(dedupeKey)) {
+        blockByTaskIndex[taskIndex] = blockId;
+        return;
+      }
+      block.dedupeKeys.add(dedupeKey);
       block.taskIndexes.push(taskIndex);
       block.tasks.push(task);
       block.points += Number(task.points || 0);
@@ -275,7 +282,7 @@
         block.figureRequired = true;
         block.figureLabel = block.figureLabel || figureMeta.figureLabel;
         block.figureSource = figureMeta.figureSource;
-        block.figureStatus = "missing";
+        block.figureStatus = figureMeta.figureStatus;
       }
       blockByTaskIndex[taskIndex] = blockId;
     });
@@ -466,7 +473,7 @@
       figureRequired: Boolean(block.figureRequired),
       figureLabel: block.figureLabel || "",
       figureSource: block.figureSource || "unknown",
-      figureStatus: block.figureRequired ? (block.figureStatus || "missing") : "present",
+      figureStatus: block.figureRequired ? (block.figureStatus || "referenced") : "present",
       variantLabel: block.variantLabel,
       isSyntheticBlock: true,
     };

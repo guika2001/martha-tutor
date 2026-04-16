@@ -31,10 +31,13 @@
     }
 
     if (task && task.figureRequired) {
+      const figureMessage = task.figureStatus === "missing"
+        ? "PDF-Abbildung fehlt."
+        : "Originalabbildung in der Quelle öffnen.";
       notices.push({
         kind: "figure",
         icon: "⚠️",
-        message: `${task.figureLabel || "Abbildung"} erforderlich. ${task.figureStatus === "missing" ? "PDF-Abbildung fehlt." : "Grafik im Original sorgfältig mitprüfen."}`,
+        message: `${task.figureLabel || "Abbildung"} erforderlich. ${figureMessage}`,
       });
     }
 
