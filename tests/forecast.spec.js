@@ -38,4 +38,18 @@ describe("forecast variants", () => {
       representativeIndex: expect.any(Number),
     }));
   });
+
+  it("localizes forecast labels and metadata for Hungarian", () => {
+    const index = buildTaskIndex([
+      { task_id: "Aufgabe a)(1)", topic: "Stochastik", question: "Q1", expected_answer: "A1", source: { level: "GK", year: "ab-2026" }, points: 4 },
+      { task_id: "Aufgabe b)(1)", topic: "Analysis", question: "Q2", expected_answer: "A2", source: { level: "GK", year: "ab-2026" }, points: 3 },
+      { task_id: "Aufgabe c)(1)", topic: "Vektorielle Geometrie", question: "Q3", expected_answer: "A3", source: { level: "GK", year: "ab-2026" }, points: 3 },
+    ]);
+
+    const variants = buildForecastVariants(index, { level: "GK", year: "ab-2026", lang: "hu" });
+
+    expect(variants[0].label).toContain("A változat");
+    expect(variants[0].rationale).toContain("NRW-szerkezet");
+    expect(["Valószínűségszámítás", "Analízis", "Vektorgeometria"]).toContain(variants[0].blocks[0].topic);
+  });
 });

@@ -1,4 +1,56 @@
 (function (root) {
+  const COPY = {
+    de: {
+      variantA: "Variante A · Höchstwahrscheinlich",
+      variantB: "Variante B · Konservativ",
+      variantC: "Variante C · Werkzeugsensitiv",
+      rationale: (level) => `Gewichtet nach ${level || "GK/LK"}, offizieller NRW-Struktur und Themenhäufigkeit.`,
+      topics: { Analysis: "Analysis", Stochastik: "Stochastik", "Vektorielle Geometrie": "Vektorielle Geometrie", "Lineare Algebra": "Lineare Algebra" },
+      examParts: { "1. Prüfungsteil": "1. Prüfungsteil", "2. Prüfungsteil": "2. Prüfungsteil" },
+      taskTypes: { Pflichtaufgabe: "Pflichtaufgabe", Wahlpflichtaufgabe: "Wahlpflichtaufgabe", Prüfungsaufgabe: "Prüfungsaufgabe" },
+      toolTypes: { hilfsmittelfrei: "hilfsmittelfrei", "mit Hilfsmitteln": "mit Hilfsmitteln", Bestandsformat: "Bestandsformat" },
+    },
+    hu: {
+      variantA: "A változat · Legvalószínűbb",
+      variantB: "B változat · Konzervatív",
+      variantC: "C változat · Eszközérzékeny",
+      rationale: (level) => `${level || "GK/LK"} szint, hivatalos NRW-szerkezet és témagyakoriság alapján súlyozva.`,
+      topics: { Analysis: "Analízis", Stochastik: "Valószínűségszámítás", "Vektorielle Geometrie": "Vektorgeometria", "Lineare Algebra": "Lineáris algebra" },
+      examParts: { "1. Prüfungsteil": "1. vizsgarész", "2. Prüfungsteil": "2. vizsgarész" },
+      taskTypes: { Pflichtaufgabe: "Kötelező feladat", Wahlpflichtaufgabe: "Választható kötelező feladat", Prüfungsaufgabe: "Vizsgafeladat" },
+      toolTypes: { hilfsmittelfrei: "segédeszköz nélkül", "mit Hilfsmitteln": "segédeszközzel", Bestandsformat: "korábbi formátum" },
+    },
+    en: {
+      variantA: "Variant A · Most likely",
+      variantB: "Variant B · Conservative",
+      variantC: "Variant C · Tool-sensitive",
+      rationale: (level) => `Weighted by ${level || "GK/LK"}, official NRW structure and topic frequency.`,
+      topics: { Analysis: "Analysis", Stochastik: "Probability", "Vektorielle Geometrie": "Vector geometry", "Lineare Algebra": "Linear algebra" },
+      examParts: { "1. Prüfungsteil": "Part 1", "2. Prüfungsteil": "Part 2" },
+      taskTypes: { Pflichtaufgabe: "Mandatory task", Wahlpflichtaufgabe: "Elective mandatory task", Prüfungsaufgabe: "Exam task" },
+      toolTypes: { hilfsmittelfrei: "without tools", "mit Hilfsmitteln": "with tools", Bestandsformat: "legacy format" },
+    },
+    es: {
+      variantA: "Variante A · Más probable",
+      variantB: "Variante B · Conservadora",
+      variantC: "Variante C · Sensible a herramientas",
+      rationale: (level) => `Ponderado por ${level || "GK/LK"}, estructura oficial de NRW y frecuencia temática.`,
+      topics: { Analysis: "Análisis", Stochastik: "Probabilidad", "Vektorielle Geometrie": "Geometría vectorial", "Lineare Algebra": "Álgebra lineal" },
+      examParts: { "1. Prüfungsteil": "Parte 1", "2. Prüfungsteil": "Parte 2" },
+      taskTypes: { Pflichtaufgabe: "Tarea obligatoria", Wahlpflichtaufgabe: "Tarea optativa obligatoria", Prüfungsaufgabe: "Tarea de examen" },
+      toolTypes: { hilfsmittelfrei: "sin herramientas", "mit Hilfsmitteln": "con herramientas", Bestandsformat: "formato anterior" },
+    },
+  };
+
+  function getCopy(langCode = "de") {
+    return COPY[langCode] || COPY.de;
+  }
+
+  function localizeValue(kind, value, copy) {
+    if (!value) return "";
+    return (copy[kind] || {})[value] || value;
+  }
+
   function flattenBlocks(index) {
     if (!index || !index.levels) return [];
     return index.levels.flatMap((level) => level.topics.flatMap((topic) => topic.blocks));
@@ -44,7 +96,7 @@
     return selected;
   }
 
-  function buildVariant(label, seed, ranked) {
+  function buildVariant(label, seed, ranked, copy) {
     const seen = new Set();
     const rotated = ranked.slice(seed).concat(ranked.slice(0, seed));
     const exam1 = pickDistinct(rotated.filter((block) => block.examPart === "1. Prüfungsteil"), 2, seen);
@@ -57,16 +109,16 @@
       level: blocks[0] ? blocks[0].level : "",
       year: blocks[0] ? blocks[0].year : "",
       score: Number(score.toFixed(1)),
-      rationale: `Gewichtet nach ${blocks[0] ? blocks[0].level : "GK/LK"}, offizieller NRW-Struktur und Themenhäufigkeit.`,
+      rationale: copy.rationale(blocks[0] ? blocks[0].level : "GK/LK"),
       blocks: blocks.map((block) => ({
         id: block.id,
         label: block.displayLabel || block.label,
         level: block.level,
-        topic: block.topic,
+        topic: localizeValue("topics", block.topic, copy),
         year: block.year,
-        examPart: block.examPart,
-        taskType: block.taskType,
-        toolType: block.toolType,
+        examPart: localizeValue("examParts", block.examPart, copy),
+        taskType: localizeValue("taskTypes", block.taskType, copy),
+        toolType: localizeValue("toolTypes", block.toolType, copy),
         taskIndexes: Array.isArray(block.taskIndexes) ? block.taskIndexes.slice() : [],
         representativeIndex: Number.isFinite(block.representativeIndex) ? block.representativeIndex : null,
       })),
@@ -77,18 +129,20 @@
     const allBlocks = flattenBlocks(index);
     const filtered = allBlocks.filter((block) => (!options.level || block.level === options.level));
     const topicWeights = buildTopicWeights(filtered);
+    const copy = getCopy(options.lang || "de");
     const ranked = filtered
       .map((block) => ({ ...block, _forecastScore: scoreBlock(block, options, topicWeights) }))
       .sort((left, right) => right._forecastScore - left._forecastScore);
     return [
-      buildVariant("Variante A · Höchstwahrscheinlich", 0, ranked),
-      buildVariant("Variante B · Konservativ", 1, ranked),
-      buildVariant("Variante C · Werkzeugsensitiv", 2, ranked),
+      buildVariant(copy.variantA, 0, ranked, copy),
+      buildVariant(copy.variantB, 1, ranked, copy),
+      buildVariant(copy.variantC, 2, ranked, copy),
     ].filter((variant) => variant.blocks.length);
   }
 
   const api = {
     buildForecastVariants,
+    getForecastCopy: getCopy,
   };
 
   if (typeof module !== "undefined" && module.exports) module.exports = api;

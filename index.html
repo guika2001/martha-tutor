@@ -34,6 +34,7 @@
 <script src="figure-redraw.js"></script>
 <script src="chat-context.js"></script>
 <script src="forecast.js"></script>
+<script src="explainer-mode.js"></script>
 <script src="ui-helpers.js"></script>
 <script src="tasks-normalize.js"></script>
 <script src="plot.js"></script>
@@ -91,6 +92,7 @@
     <div class="sim-launch">
       <button class="btn-sec sim-launch-btn" id="startSimulationBtn" onclick="window._openSimulationModal()">🧪 Prüfungssimulation</button>
       <button class="btn-sec sim-launch-btn" id="openForecastBtn" onclick="window._openForecastModal()" style="margin-top:8px">📊 Prüfungsprognose</button>
+      <button class="btn-sec sim-launch-btn" id="openExplainerBtn" onclick="window._openExplainerMode()" style="margin-top:8px">💬 Magyarázó</button>
       <button class="btn-sec sim-launch-btn" id="openHelpBtn" onclick="window._openHelpManual()" style="margin-top:8px">❓ Súgó</button>
     </div>
     <div class="auth-inline" id="authBar" style="display:none">
@@ -146,6 +148,7 @@
       <div class="ed" id="welcome-sub">Wähle links eine Aufgabe — ich erkläre dir Schritt für Schritt.</div>
       <button class="btn-pri" id="welcomeSimulationBtn" style="margin-top:18px" onclick="window._openSimulationModal()">🧪 Prüfungssimulation starten</button>
       <button class="btn-sec" id="welcomeForecastBtn" style="margin-top:10px" onclick="window._openForecastModal()">📊 Wahrscheinliche Probeklausuren</button>
+      <button class="btn-sec" id="welcomeExplainerBtn" style="margin-top:10px" onclick="window._openExplainerMode()">💬 Kérdezz Marthától</button>
       <button class="btn-sec" id="welcomeHelpBtn" style="margin-top:10px" onclick="window._openHelpManual()">❓ Felhasználói kézikönyv</button>
     </div>
 
@@ -219,11 +222,11 @@
      onclick="if(event.target===this)window._closeForecastModal()">
   <div class="modal" style="max-width:760px">
     <div class="mh">
-      <h2>📊 Prüfungsprognose</h2>
+      <h2 id="forecastModalTitle">📊 Prüfungsprognose</h2>
       <button class="mx" onclick="window._closeForecastModal()">✕</button>
     </div>
     <div class="mb">
-      <div class="gen-box" style="margin-bottom:14px">
+      <div class="gen-box" id="forecastIntro" style="margin-bottom:14px">
         Die Varianten priorisieren wahrscheinliche NRW-Muster. Sie sind eine lernorientierte Prognose, keine echte Vorhersage der Prüfung.
       </div>
       <div id="forecastLevelControls" class="forecast-levels"></div>
@@ -232,7 +235,7 @@
     </div>
     <div class="mf">
       <button class="btn-pri" id="forecastLoadBtn" onclick="window._loadSelectedForecastVariant()" disabled>Variante laden</button>
-      <button class="btn-sec" onclick="window._closeForecastModal()">Schließen</button>
+      <button class="btn-sec" id="forecastCloseBtn" onclick="window._closeForecastModal()">Schließen</button>
     </div>
   </div>
 </div>
@@ -353,6 +356,10 @@ const LANGUAGES = {
       all_failed: " Versuche ohne Erfolg.", all_failed_hint: "Versuche eine andere Aufgabe oder \u00e4ndere den Schwierigkeitsgrad.",
       simulation: "🧪 Prüfungssimulation", simulation_start: "🧪 Prüfungssimulation starten",
       forecast: "📊 Prüfungsprognose", forecast_open: "📊 Wahrscheinliche Probeklausuren",
+      explainer: "💬 Erklärmodus", explainer_open: "💬 Martha etwas fragen",
+      forecast_title: "📊 Prüfungsprognose",
+      forecast_intro: "Die Varianten priorisieren wahrscheinliche NRW-Muster. Sie sind eine lernorientierte Prognose, keine echte Vorhersage der Prüfung.",
+      forecast_load: "Variante laden", forecast_close: "Schließen",
       help: "❓ Hilfe", help_open: "❓ Benutzerhandbuch",
       operator_demand: "🧭 Was verlangt der Operator?", operator_full: "📝 Volle-BE Antwort",
       understood: "✔ Verstanden", unsure: "✖ Unsicher", repeat_next: "🗂 Nächste Wiederholung",
@@ -393,6 +400,10 @@ Aufgabe auf Deutsch.`,
       all_failed: " próbálkozás sikertelen.", all_failed_hint: "Próbálj másik feladatot, vagy változtass a nehézségen.",
       simulation: "🧪 Érettségi szimuláció", simulation_start: "🧪 Érettségi szimuláció indítása",
       forecast: "📊 Érettségi prognózis", forecast_open: "📊 Valószínű próbaérettségik",
+      explainer: "💬 Magyarázó", explainer_open: "💬 Kérdezz Marthától",
+      forecast_title: "📊 Érettségi prognózis",
+      forecast_intro: "A változatok a valószínű NRW-mintákat priorizálják. Ez tanulási célú prognózis, nem a valódi vizsga előrejelzése.",
+      forecast_load: "Változat betöltése", forecast_close: "Bezárás",
       help: "❓ Súgó", help_open: "❓ Felhasználói kézikönyv",
       operator_demand: "🧭 Mit kér az operátor?", operator_full: "📝 Teljes pontos válasz",
       understood: "✔ Értem", unsure: "✖ Bizonytalan", repeat_next: "🗂 Következő ismétlés",
@@ -433,6 +444,10 @@ A feladatot magyarul fogalmazd meg.`,
       all_failed: " attempts failed.", all_failed_hint: "Try a different task or change the difficulty level.",
       simulation: "🧪 Exam simulation", simulation_start: "🧪 Start exam simulation",
       forecast: "📊 Exam forecast", forecast_open: "📊 Likely mock exams",
+      explainer: "💬 Explainer", explainer_open: "💬 Ask Martha",
+      forecast_title: "📊 Exam forecast",
+      forecast_intro: "These variants prioritize likely NRW patterns. They are a study-oriented forecast, not a real prediction of the exam.",
+      forecast_load: "Load variant", forecast_close: "Close",
       help: "❓ Help", help_open: "❓ User manual",
       operator_demand: "🧭 What does the operator require?", operator_full: "📝 Full-credit answer",
       understood: "✔ Understood", unsure: "✖ Unsure", repeat_next: "🗂 Next review",
@@ -471,6 +486,10 @@ Write the task in English.`,
       greeting: "¡Hola! \ud83d\udc4b Soy Martha, tu profesora de matemáticas.\n\nMira el ejercicio de arriba. ¿Cómo quieres empezar?\nPuedes decirme lo que ya sabes o pedir una \ud83d\udca1 pista.",
       verified: "\u2713 Verificado matemáticamente", math_error: "Error matemático, reintentando...",
       all_failed: " intentos fallidos.", all_failed_hint: "Prueba con otro ejercicio o cambia el nivel de dificultad.",
+      explainer: "💬 Explicador", explainer_open: "💬 Pregunta a Martha",
+      forecast_title: "📊 Pronóstico del examen",
+      forecast_intro: "Estas variantes priorizan patrones probables de NRW. Son una previsión orientada al estudio, no una predicción real del examen.",
+      forecast_load: "Cargar variante", forecast_close: "Cerrar",
       help: "❓ Ayuda", help_open: "❓ Manual del usuario",
     },
     system: `Eres Martha, una profesora de matemáticas experimentada para el Abitur de NRW.
@@ -525,10 +544,16 @@ function applyUILanguage() {
   set("upload-modal-title", ui.upload_modal_title);
   set("startSimulationBtn", ui.simulation || "🧪 Prüfungssimulation");
   set("openForecastBtn", ui.forecast || "📊 Prüfungsprognose");
+  set("openExplainerBtn", ui.explainer || "💬 Erklärmodus");
   set("openHelpBtn", ui.help || "❓ Hilfe");
   set("welcomeSimulationBtn", ui.simulation_start || "🧪 Prüfungssimulation starten");
   set("welcomeForecastBtn", ui.forecast_open || "📊 Wahrscheinliche Probeklausuren");
+  set("welcomeExplainerBtn", ui.explainer_open || "💬 Martha etwas fragen");
   set("welcomeHelpBtn", ui.help_open || "❓ Benutzerhandbuch");
+  set("forecastModalTitle", ui.forecast_title || "📊 Prüfungsprognose");
+  set("forecastIntro", ui.forecast_intro || "Die Varianten priorisieren wahrscheinliche NRW-Muster. Sie sind eine lernorientierte Prognose, keine echte Vorhersage der Prüfung.");
+  set("forecastLoadBtn", ui.forecast_load || "Variante laden");
+  set("forecastCloseBtn", ui.forecast_close || "Schließen");
   set("authInlineLabel", ui.logged_in || "Angemeldet");
   set("authLogoutBtn", ui.logout || "Logout");
   set("diagTitle", ui.diagnose || "Diagnose");
@@ -561,6 +586,28 @@ function openHelpManual() {
 
 window._openHelpManual = openHelpManual;
 
+function openExplainerMode() {
+  state.explainerMode = true;
+  clearForecastState();
+  state.selectedIdx = -1;
+  state.selectedBlockId = "";
+  state.selectedTaskRef = window.MarthaExplainerMode && typeof window.MarthaExplainerMode.buildExplainerTask === "function"
+    ? window.MarthaExplainerMode.buildExplainerTask(_currentLang)
+    : null;
+  startNewChatContext("explainer");
+  document.getElementById('cht').textContent = state.selectedTaskRef?.task_id || "Magyarázó";
+  document.getElementById('chs').textContent = state.selectedTaskRef?.subtopic || "";
+  document.getElementById('cin').style.display = 'flex';
+  document.getElementById('qa').style.display = 'none';
+  document.getElementById('app').classList.add('co');
+  const welcome = document.getElementById('welcome');
+  const cms = document.getElementById('cms');
+  if (welcome) welcome.style.display = 'none';
+  if (cms) cms.style.display = 'block';
+  renderChat(-1);
+  setTimeout(() => document.getElementById('mi').focus(), 300);
+}
+
 
 // ══ state.js ══
 // ── state.js ────────────────────────────────────────────────────────────────
@@ -590,6 +637,7 @@ const state = {
   selectedForecastVariantId: "",
   loadedForecastVariant: null,
   chatContextKey: "base",
+  explainerMode: false,
 };
 
 const appStorage = window.MarthaStorage ? window.MarthaStorage.createStorage("martha4") : null;
@@ -959,9 +1007,11 @@ function renderForecastContent() {
   if (!container || !detail || !levelControls || !loadBtn || !window.MarthaForecast || !state.taskIndex) return;
   const preferredLevel = state.forecastLevel || (state.levelFilter === "all" ? "GK" : state.levelFilter);
   const preferredYear = state.currentYear || "ab-2026";
+  const lang = _currentLang || "de";
   const variants = window.MarthaForecast.buildForecastVariants(state.taskIndex, {
     level: preferredLevel,
     year: preferredYear,
+    lang,
   });
   if (!variants.length) {
     container.innerHTML = "";
@@ -1051,9 +1101,10 @@ function loadForecastVariantById(variantId, focusBlockId = "") {
   if (!window.MarthaForecast || !state.taskIndex) return;
   const level = state.forecastLevel || (state.levelFilter === "all" ? "GK" : state.levelFilter);
   const year = state.currentYear || "ab-2026";
-  const variants = window.MarthaForecast.buildForecastVariants(state.taskIndex, { level, year });
+  const variants = window.MarthaForecast.buildForecastVariants(state.taskIndex, { level, year, lang: _currentLang || "de" });
   const variant = variants.find((entry) => entry.id === variantId);
   if (!variant) return;
+  state.explainerMode = false;
   state.levelFilter = variant.level || level;
   state.currentTopic = "";
   state.currentExamPart = "";
@@ -1109,6 +1160,7 @@ function startSimulation() {
   state.currentToolType = toolType;
   state.selectedBlockId = "";
   state.selectedTaskRef = null;
+  state.explainerMode = false;
   startNewChatContext("simulation");
   applyFilters();
 
@@ -1948,11 +2000,12 @@ window._setYearFilter = (year) => {
 window._setExamPartFilter = (value) => { clearForecastState(); state.currentExamPart = value; state.selectedBlockId = ""; state.selectedTaskRef = null; applyFilters(); };
 window._setTaskTypeFilter = (value) => { clearForecastState(); state.currentTaskType = value; state.selectedBlockId = ""; state.selectedTaskRef = null; applyFilters(); };
 window._setToolTypeFilter = (value) => { clearForecastState(); state.currentToolType = value; state.selectedBlockId = ""; state.selectedTaskRef = null; applyFilters(); };
-window._navTopic = (topic) => { clearForecastState(); state.currentTopic = topic; state.selectedBlockId = ""; state.selectedTaskRef = null; applyFilters(); };
+window._navTopic = (topic) => { clearForecastState(); state.explainerMode = false; state.currentTopic = topic; state.selectedBlockId = ""; state.selectedTaskRef = null; applyFilters(); };
 window._navBack = () => {
   if (state.loadedForecastVariant) clearForecastState();
   else if (state.currentTopic) state.currentTopic = "";
   else if (state.levelFilter !== "all") state.levelFilter = "all";
+  state.explainerMode = false;
   state.selectedBlockId = "";
   state.selectedTaskRef = null;
   applyFilters();
@@ -1960,6 +2013,7 @@ window._navBack = () => {
 window._selectBlock = (blockId) => {
   const block = getBlockById(blockId);
   if (!block) return;
+  state.explainerMode = false;
   startNewChatContext("block");
   state.selectedBlockId = blockId;
   state.selectedTaskRef = window.MarthaTaskNav && window.MarthaTaskNav.buildCombinedTask
@@ -1978,6 +2032,7 @@ const _translCache = {};
 async function getTranslatedQuestion(i) {
   const lang = typeof _currentLang !== "undefined" ? _currentLang : "de";
   if (lang === "de") return null; // No translation needed for German
+  if (state.explainerMode) return null;
   const key = i + "_" + lang;
   if (_translCache[key]) return _translCache[key];
 
@@ -2034,7 +2089,7 @@ function sel(i) {
   const metaBits = buildTaskMetaBits(t);
   document.getElementById('chs').textContent = metaBits.join(' \u00b7 ') + (t.points ? ' \u00b7 ' + t.points + ' BE' : '');
   document.getElementById('cin').style.display = 'flex';
-  document.getElementById('qa').style.display = 'flex';
+  document.getElementById('qa').style.display = t.isExplainerMode ? 'none' : 'flex';
   document.getElementById('app').classList.add('co');
   const welcome = document.getElementById('welcome');
   const cms = document.getElementById('cms');
@@ -2106,32 +2161,36 @@ async function renderChat(i) {
 
   if (taskHost.dataset.renderKey !== taskRenderKey) {
     taskHost.innerHTML = '';
-    taskHost.appendChild(taskBubbleDiv);
-    const noticeHost = document.createElement('div');
-    noticeHost.className = 'task-assist-stack';
-    const notices = buildTaskNoticeMessages(t);
-    if (notices.length) {
-      renderTaskNoticeMessages(noticeHost, notices);
-    }
-    if (window.MarthaUiHelpers && typeof window.MarthaUiHelpers.createFigurePanel === 'function') {
-      const figurePanel = window.MarthaUiHelpers.createFigurePanel(document, t);
-      if (figurePanel) {
-        noticeHost.appendChild(figurePanel);
-        setTimeout(() => window.MarthaUiHelpers.hydrateFigurePanel(figurePanel), 0);
+    if (!t.isExplainerMode) {
+      taskHost.appendChild(taskBubbleDiv);
+      const noticeHost = document.createElement('div');
+      noticeHost.className = 'task-assist-stack';
+      const notices = buildTaskNoticeMessages(t);
+      if (notices.length) {
+        renderTaskNoticeMessages(noticeHost, notices);
+      }
+      if (window.MarthaUiHelpers && typeof window.MarthaUiHelpers.createFigurePanel === 'function') {
+        const figurePanel = window.MarthaUiHelpers.createFigurePanel(document, t);
+        if (figurePanel) {
+          noticeHost.appendChild(figurePanel);
+          setTimeout(() => window.MarthaUiHelpers.hydrateFigurePanel(figurePanel), 0);
+        }
+      }
+      if (noticeHost.childNodes.length) {
+        taskHost.appendChild(noticeHost);
       }
     }
-    if (noticeHost.childNodes.length) {
-      taskHost.appendChild(noticeHost);
-    }
     taskHost.dataset.renderKey = taskRenderKey;
-    renderMath(taskBubbleInner);
-    setTimeout(() => renderMath(taskBubbleInner), 300);
-    setTimeout(() => renderMath(taskBubbleInner), 800);
+    if (!t.isExplainerMode) {
+      renderMath(taskBubbleInner);
+      setTimeout(() => renderMath(taskBubbleInner), 300);
+      setTimeout(() => renderMath(taskBubbleInner), 800);
+    }
   }
 
   let html = '';
   if (!h.length) {
-    html += '<div class="mg a"><div class="bu"><div class="sn">MARTHA</div>' + esc(getUI().greeting) + '</div></div>';
+    html += '<div class="mg a"><div class="bu"><div class="sn">MARTHA</div>' + esc(t.isExplainerMode ? (t.explainerGreeting || getUI().greeting) : getUI().greeting) + '</div></div>';
   }
   h.forEach((m, idx) => {
     if (m.role === 'user') {
@@ -2205,7 +2264,7 @@ function operatorFullCreditHelp() {
 }
 
 async function sendMessage() {
-  if (state.streaming || state.selectedIdx < 0) return;
+  if (state.streaming || !getActiveTask()) return;
   const inp = document.getElementById('mi');
   const txt = inp.value.trim();
   if (!txt) return;
@@ -2281,6 +2340,7 @@ window._loadSelectedForecastVariant = () => {
   loadForecastVariantById(btn.dataset.variantId);
 };
 window._openForecastBlock = openForecastBlock;
+window._openExplainerMode = openExplainerMode;
 window._startSimulation = startSimulation;
 window._finishSimulation = finishSimulation;
 window._recordTaskOutcome = recordTaskOutcome;
