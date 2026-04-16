@@ -1213,7 +1213,7 @@ async function renderChat(i) {
   let html = '';
   const q = (t.question || '').toLowerCase();
   if (q.includes('abbildung') || q.includes('dargestellt') || q.includes('histogramm')) {
-    html += '<div class="abw">\u26a0\ufe0f Abbildung. Klicke \ud83d\udcc8</div>';
+    html += '<div class="abw">\u26a0\ufe0f Diese Aufgabe enthält eine Abbildung. Prüfe die Grafik im Original sorgfältig mit.</div>';
   }
   if (!h.length) {
     html += '<div class="mg a"><div class="bu"><div class="sn">MARTHA</div>' + esc(getUI().greeting) + '</div></div>';

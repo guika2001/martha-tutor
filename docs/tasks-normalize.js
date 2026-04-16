@@ -48,16 +48,32 @@
     return sentence.slice(0, maxLength - 1).trimEnd() + "…";
   }
 
+  function sanitizeTitleText(text) {
+    return normalizeWhitespace(text)
+      .replace(/\$+/g, "")
+      .replace(/\\begin\{[^}]+\}.*?\\end\{[^}]+\}/g, " ")
+      .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, "($1/$2)")
+      .replace(/\\vec\{([^}]+)\}/g, "$1")
+      .replace(/\\overrightarrow\{([^}]+)\}/g, "$1")
+      .replace(/\\mathbb\{R\}/g, "R")
+      .replace(/\\[a-zA-Z]+\{([^}]*)\}/g, "$1")
+      .replace(/\\[a-zA-Z]+/g, " ")
+      .replace(/[{}]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
   function deriveFunctionSnippet(text) {
-    const match = stripTaskLeadIn(text).match(/([fgh]\s*\(\s*x\s*\)\s*=\s*[^.\n,;]{3,80})/i);
-    return match ? match[1].replace(/\$/g, "").replace(/\s+/g, " ").trim() : "";
+    const plain = sanitizeTitleText(stripTaskLeadIn(text));
+    const match = plain.match(/([fgh]\s*\(\s*x\s*\)\s*=\s*[^.\n,;]{3,80})/i);
+    return match ? match[1].replace(/\s+/g, " ").trim() : "";
   }
 
   function buildBlockDisplayLabel(tasks, fallback) {
     const firstQuestion = tasks.length ? stripTaskLeadIn(tasks[0].question || "") : "";
     const functionSnippet = deriveFunctionSnippet(firstQuestion);
     if (functionSnippet) return functionSnippet;
-    const firstSentence = shortenSentence(firstQuestion, 78);
+    const firstSentence = shortenSentence(sanitizeTitleText(firstQuestion), 78);
     return firstSentence || fallback;
   }
 
