@@ -2,6 +2,7 @@ const { screen } = require("@testing-library/dom");
 const {
   buildTaskMetaBits,
   buildTaskNoticeMessages,
+  createNoticeElement,
   renderTaskNoticeMessages,
 } = require("../ui-helpers.js");
 const { buildToolModeHint } = require("../tool-mode.js");
@@ -30,10 +31,13 @@ describe("ui helpers", () => {
     const notices = buildTaskNoticeMessages(
       {
         toolMode: "cas",
-        question: "Der Graph ist in Abbildung 1 dargestellt.",
         figureRequired: true,
         figureLabel: "Abbildung 1",
         figureStatus: "referenced",
+        topic: "Vektorielle Geometrie",
+        examPart: "1. Prüfungsteil",
+        taskType: "Wahlpflichtaufgabe",
+        source: { level: "LK", year: "2025-Beispiel" },
       },
       { buildToolModeHint }
     );
@@ -42,6 +46,9 @@ describe("ui helpers", () => {
 
     expect(screen.getByText(/CAS\/MMS:/)).toBeInTheDocument();
     expect(screen.getByText(/Abbildung 1 erforderlich/)).toBeInTheDocument();
-    expect(screen.getByText(/Originalabbildung in der Quelle öffnen/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Original-PDF/ })).toHaveAttribute(
+      "href",
+      expect.stringContaining("Mathematik_LK_2025-Beispiel_1_Prüfungsteil_LK_Wahlpflichtaufgabe_bis_2025.pdf")
+    );
   });
 });

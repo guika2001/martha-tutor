@@ -1,4 +1,10 @@
 (function (root) {
+  const figureSourceApi = typeof module !== "undefined" && module.exports
+    ? require("./figure-source.js")
+    : root && root.MarthaFigureSources
+      ? root.MarthaFigureSources
+      : null;
+
   function buildTaskMetaBits(task) {
     const source = (task && task.source) || {};
     const bits = [
@@ -21,7 +27,9 @@
   function buildTaskNoticeMessages(task, dependencies = {}) {
     const notices = [];
     const buildToolModeHint = dependencies.buildToolModeHint;
-    const question = String((task && task.question) || "").toLowerCase();
+    const sources = figureSourceApi && typeof figureSourceApi.resolveFigurePdfSources === "function"
+      ? figureSourceApi.resolveFigurePdfSources(task)
+      : [];
 
     if (typeof buildToolModeHint === "function") {
       const hint = buildToolModeHint(task ? task.toolMode : null);
@@ -31,34 +39,113 @@
     }
 
     if (task && task.figureRequired) {
-      const figureMessage = task.figureStatus === "missing"
-        ? "PDF-Abbildung fehlt."
-        : "Originalabbildung in der Quelle öffnen.";
+      let figureMessage = "Originalabbildung in der Quelle öffnen.";
+      if (!sources.length && task.figureStatus === "missing") figureMessage = "PDF-Abbildung fehlt.";
+      else if (!sources.length) figureMessage = "Keine passende PDF-Quelle validiert.";
       notices.push({
         kind: "figure",
         icon: "⚠️",
         message: `${task.figureLabel || "Abbildung"} erforderlich. ${figureMessage}`,
+        sources,
       });
     }
 
     return notices;
   }
 
+  function createNoticeElement(doc, notice) {
+    const element = doc.createElement("div");
+    element.className = "abw";
+    const text = doc.createElement("span");
+    text.textContent = `${notice.icon} ${notice.message}`;
+    element.appendChild(text);
+    if (notice.sources && notice.sources.length) {
+      const links = doc.createElement("div");
+      links.className = "notice-links";
+      notice.sources.forEach((source) => {
+        const anchor = doc.createElement("a");
+        anchor.className = "notice-link";
+        anchor.href = source.href;
+        anchor.target = "_blank";
+        anchor.rel = "noopener noreferrer";
+        anchor.textContent = source.label;
+        links.appendChild(anchor);
+      });
+      element.appendChild(links);
+    }
+    return element;
+  }
+
   function renderTaskNoticeMessages(container, notices) {
     container.innerHTML = "";
     notices.forEach((notice) => {
-      const element = container.ownerDocument.createElement("div");
-      element.className = "abw";
-      element.textContent = `${notice.icon} ${notice.message}`;
-      container.appendChild(element);
+      container.appendChild(createNoticeElement(container.ownerDocument, notice));
     });
     return container;
+  }
+
+  function createFigurePanel(doc, task) {
+    if (!task || !task.figureRequired || !figureSourceApi || typeof figureSourceApi.resolveFigurePdfSources !== "function") return null;
+    const sources = figureSourceApi.resolveFigurePdfSources(task);
+    if (!sources.length) return null;
+
+    const panel = doc.createElement("section");
+    panel.className = "pdf-panel";
+
+    const header = doc.createElement("div");
+    header.className = "pdf-panel-head";
+    header.innerHTML = `<strong>${task.figureLabel || "Abbildung"}</strong><span>PDF-Quelle wird validiert …</span>`;
+    panel.appendChild(header);
+
+    const linkRow = doc.createElement("div");
+    linkRow.className = "pdf-panel-links";
+    sources.forEach((source, index) => {
+      const anchor = doc.createElement("a");
+      anchor.className = "pdf-chip";
+      anchor.href = source.href;
+      anchor.target = "_blank";
+      anchor.rel = "noopener noreferrer";
+      anchor.textContent = source.label;
+      if (index === 0) anchor.dataset.primary = "true";
+      linkRow.appendChild(anchor);
+    });
+    panel.appendChild(linkRow);
+
+    const preview = doc.createElement("div");
+    preview.className = "pdf-preview";
+    panel.appendChild(preview);
+
+    panel._task = task;
+    panel._sources = sources;
+    return panel;
+  }
+
+  async function hydrateFigurePanel(panel) {
+    if (!panel || !root || !root.MarthaPdfFigure || typeof root.MarthaPdfFigure.renderFigurePreview !== "function") return;
+    if (panel.dataset.hydrated === "true") return;
+    panel.dataset.hydrated = "true";
+    const preview = panel.querySelector(".pdf-preview");
+    try {
+      await root.MarthaPdfFigure.renderFigurePreview(preview, {
+        task: panel._task,
+        sources: panel._sources,
+      });
+      const statusText = preview.dataset.status || "PDF-Quelle bereit.";
+      const headStatus = panel.querySelector(".pdf-panel-head span");
+      if (headStatus) headStatus.textContent = statusText;
+    } catch (_) {
+      const headStatus = panel.querySelector(".pdf-panel-head span");
+      if (headStatus) headStatus.textContent = "PDF-Vorschau konnte nicht geladen werden.";
+    }
   }
 
   const api = {
     buildTaskMetaBits,
     buildTaskNoticeMessages,
+    createNoticeElement,
     renderTaskNoticeMessages,
+    createFigurePanel,
+    hydrateFigurePanel,
   };
 
   if (typeof module !== "undefined" && module.exports) module.exports = api;

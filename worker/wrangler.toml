@@ -7,5 +7,4 @@ SUPABASE_URL = "https://faapayybqonifeeeaqgj.supabase.co"
 SUPABASE_JWKS_URL = "https://faapayybqonifeeeaqgj.supabase.co/auth/v1/.well-known/jwks.json"
 SUPABASE_AUDIENCE = "authenticated"
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
-ALLOWED_EMAILS = "gulyas.samsung@gmail.com,boglarka.gulyas.hu@gmail.com"
-
+ALLOWED_EMAILS = "gulyas.samsung@gmail.com,boglarka.gulyas.hu@gmail.com,nyerges.bognar.veronika@gmail.com,gulyasne.nemeth.marta@gmail.com"

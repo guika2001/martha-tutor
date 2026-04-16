@@ -25,6 +25,9 @@
 <script src="solution-style.js"></script>
 <script src="operatoren.js"></script>
 <script src="tool-mode.js"></script>
+<script src="figure-source.js"></script>
+<script src="pdf-figure.js"></script>
+<script src="forecast.js"></script>
 <script src="ui-helpers.js"></script>
 <script src="tasks-normalize.js"></script>
 <script src="plot.js"></script>
@@ -81,6 +84,7 @@
   <div class="status"><span class="dot" id="sd"></span><span id="st">Verbinde...</span></div>
     <div class="sim-launch">
       <button class="btn-sec sim-launch-btn" id="startSimulationBtn" onclick="window._openSimulationModal()">🧪 Prüfungssimulation</button>
+      <button class="btn-sec sim-launch-btn" id="openForecastBtn" onclick="window._openForecastModal()" style="margin-top:8px">📊 Prüfungsprognose</button>
     </div>
     <div class="auth-inline" id="authBar" style="display:none">
       <div class="auth-inline-copy">
@@ -134,6 +138,7 @@
       <div class="et" id="welcome-title">Hallo, ich bin Martha!</div>
       <div class="ed" id="welcome-sub">Wähle links eine Aufgabe — ich erkläre dir Schritt für Schritt.</div>
       <button class="btn-pri" style="margin-top:18px" onclick="window._openSimulationModal()">🧪 Prüfungssimulation starten</button>
+      <button class="btn-sec" style="margin-top:10px" onclick="window._openForecastModal()">📊 Wahrscheinliche Probeklausuren</button>
     </div>
 
     <div class="qa" id="qa" style="display:none">
@@ -198,6 +203,25 @@
     <div class="mf">
       <button class="btn-pri" id="startSimulationConfirmBtn" onclick="window._startSimulation()">Simulation starten</button>
       <button class="btn-sec" onclick="window._closeSimulationModal()">Abbrechen</button>
+    </div>
+  </div>
+</div>
+
+<div id="forecastModal" class="modal-bg" style="display:none"
+     onclick="if(event.target===this)window._closeForecastModal()">
+  <div class="modal" style="max-width:760px">
+    <div class="mh">
+      <h2>📊 Prüfungsprognose</h2>
+      <button class="mx" onclick="window._closeForecastModal()">✕</button>
+    </div>
+    <div class="mb">
+      <div class="gen-box" style="margin-bottom:14px">
+        Die Varianten priorisieren wahrscheinliche NRW-Muster. Sie sind eine lernorientierte Prognose, keine echte Vorhersage der Prüfung.
+      </div>
+      <div id="forecastContent" class="forecast-grid"></div>
+    </div>
+    <div class="mf">
+      <button class="btn-sec" onclick="window._closeForecastModal()">Schließen</button>
     </div>
   </div>
 </div>
@@ -569,6 +593,13 @@ function buildTaskNoticeMessages(task) {
   return [];
 }
 
+function renderTaskNoticeMessages(container, notices) {
+  if (window.MarthaUiHelpers && typeof window.MarthaUiHelpers.renderTaskNoticeMessages === "function") {
+    return window.MarthaUiHelpers.renderTaskNoticeMessages(container, notices);
+  }
+  return container;
+}
+
 function saveSimulationState() {
   if (!appStorage) return;
   if (!state.activeSimulation) {
@@ -778,6 +809,45 @@ function openSimulationModal() {
 
 function closeSimulationModal() {
   document.getElementById("simulationModal").style.display = "none";
+}
+
+function renderForecastContent() {
+  const container = document.getElementById("forecastContent");
+  if (!container || !window.MarthaForecast || !state.taskIndex) return;
+  const preferredLevel = state.levelFilter === "all" ? "GK" : state.levelFilter;
+  const preferredYear = state.currentYear || "ab-2026";
+  const variants = window.MarthaForecast.buildForecastVariants(state.taskIndex, {
+    level: preferredLevel,
+    year: preferredYear,
+  });
+  container.innerHTML = "";
+  variants.forEach((variant) => {
+    const card = document.createElement("section");
+    card.className = "forecast-card";
+    const items = variant.blocks.map((block) => (
+      `<li><strong>${esc(block.label)}</strong><span>${esc(block.topic)} · ${esc(block.examPart)} · ${esc(block.taskType)}</span></li>`
+    )).join("");
+    card.innerHTML = `
+      <div class="forecast-top">
+        <div>
+          <div class="forecast-title">${esc(variant.label)}</div>
+          <div class="forecast-rationale">${esc(variant.rationale)}</div>
+        </div>
+        <div class="forecast-score">${esc(String(variant.score))}</div>
+      </div>
+      <ol class="forecast-list">${items}</ol>
+    `;
+    container.appendChild(card);
+  });
+}
+
+function openForecastModal() {
+  renderForecastContent();
+  document.getElementById("forecastModal").style.display = "flex";
+}
+
+function closeForecastModal() {
+  document.getElementById("forecastModal").style.display = "none";
 }
 
 function startSimulation() {
@@ -1435,22 +1505,25 @@ function renderFilters() {
   if (state.currentTopic) path.push(state.currentTopic);
   const filters = state.filtered && state.filtered.filters ? state.filtered.filters : {};
   el.innerHTML = "";
+  const topRow = document.createElement("div");
+  topRow.className = "fr nav-stack-top";
   const back = document.createElement("button");
   back.className = "fb";
   back.textContent = path.length ? "← Zurück" : "Navigator";
   back.disabled = !path.length;
   back.onclick = () => window._navBack();
-  el.appendChild(back);
+  el.classList.add("nav-stack");
+  topRow.appendChild(back);
   const label = document.createElement("div");
   label.className = "nav-path";
   label.textContent = path.length ? path.join(" · ") : "GK/LK → Thema → Aufgabenblock";
-  el.appendChild(label);
+  topRow.appendChild(label);
+  el.appendChild(topRow);
 
   function appendFilterRow(items, selectedValue, onSelect, title) {
     if (!items || items.length <= 1) return;
     const row = document.createElement("div");
-    row.className = "fr";
-    row.style.padding = "8px 0 0";
+    row.className = "fr nav-filter-row";
     const marker = document.createElement("div");
     marker.className = "nav-filter-label";
     marker.textContent = title;
@@ -1709,9 +1782,6 @@ async function renderChat(i) {
   taskBubbleDiv.appendChild(taskBubbleInner);
 
   let html = '';
-  buildTaskNoticeMessages(t).forEach((notice) => {
-    html += '<div class="abw">' + esc(notice.icon + ' ' + notice.message) + '</div>';
-  });
   if (!h.length) {
     html += '<div class="mg a"><div class="bu"><div class="sn">MARTHA</div>' + esc(getUI().greeting) + '</div></div>';
   }
@@ -1725,6 +1795,22 @@ async function renderChat(i) {
 
   el.innerHTML = html;
   el.insertBefore(taskBubbleDiv, el.firstChild);
+  const noticeHost = document.createElement('div');
+  noticeHost.className = 'task-assist-stack';
+  const notices = buildTaskNoticeMessages(t);
+  if (notices.length) {
+    renderTaskNoticeMessages(noticeHost, notices);
+  }
+  if (window.MarthaUiHelpers && typeof window.MarthaUiHelpers.createFigurePanel === 'function') {
+    const figurePanel = window.MarthaUiHelpers.createFigurePanel(document, t);
+    if (figurePanel) {
+      noticeHost.appendChild(figurePanel);
+      setTimeout(() => window.MarthaUiHelpers.hydrateFigurePanel(figurePanel), 0);
+    }
+  }
+  if (noticeHost.childNodes.length) {
+    el.insertBefore(noticeHost, taskBubbleDiv.nextSibling);
+  }
   el.scrollTop = el.scrollHeight;
   // Render math — try immediately and retry after a short delay for KaTeX timing
   renderMath(taskBubbleInner);
@@ -1845,6 +1931,8 @@ window._operatorDemandHelp = operatorDemandHelp;
 window._operatorFullCreditHelp = operatorFullCreditHelp;
 window._openSimulationModal = openSimulationModal;
 window._closeSimulationModal = closeSimulationModal;
+window._openForecastModal = openForecastModal;
+window._closeForecastModal = closeForecastModal;
 window._startSimulation = startSimulation;
 window._finishSimulation = finishSimulation;
 window._recordTaskOutcome = recordTaskOutcome;
