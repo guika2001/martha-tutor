@@ -1,4 +1,12 @@
 (function (root) {
+  function getMathApi() {
+    if (typeof math !== "undefined") return math;
+    if (typeof require === "function") {
+      try { return require("mathjs"); } catch (_) {}
+    }
+    return null;
+  }
+
   function normalizePlotExpression(text) {
     if (!text) return "";
     let t = String(text);
@@ -123,6 +131,7 @@
   }
 
   function validatePlotExpression(expr) {
+    const mathApi = getMathApi();
     const normalized = normalizePlotExpression(expr)
       .replace(/(\d)([x(])/g, "$1*$2")
       .replace(/([)])(\d)/g, "$1*$2")
@@ -139,14 +148,30 @@
     if (!hasOnlySupportedIdentifiers(normalized)) {
       return { ok: false, reason: "Der Term enthält nicht unterstützte Bezeichner." };
     }
-    if (typeof math !== "undefined") {
+    if (mathApi) {
       try {
-        math.parse(normalized);
+        mathApi.parse(normalized);
       } catch (error) {
         return { ok: false, reason: "Parse-Fehler: " + error.message };
       }
     }
     return { ok: true, expr: normalized };
+  }
+
+  function deriveExpression(expr, order) {
+    const derivativeOrder = Math.max(1, Number(order) || 1);
+    const validation = validatePlotExpression(expr);
+    const mathApi = getMathApi();
+    if (!validation.ok || !mathApi) return null;
+    try {
+      let node = mathApi.parse(validation.expr);
+      for (let i = 0; i < derivativeOrder; i++) {
+        node = mathApi.derivative(node, "x");
+      }
+      return mathApi.simplify(node).toString();
+    } catch (_) {
+      return null;
+    }
   }
 
   function niceStep(range, maxTicks) {
@@ -339,6 +364,7 @@
     guessRange,
     detectPlots,
     validatePlotExpression,
+    deriveExpression,
     drawPlot,
     renderPlotsFromText,
   };

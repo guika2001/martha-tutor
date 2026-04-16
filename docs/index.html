@@ -2014,11 +2014,19 @@ window._selectBlock = (blockId) => {
   const block = getBlockById(blockId);
   if (!block) return;
   state.explainerMode = false;
-  startNewChatContext("block");
   state.selectedBlockId = blockId;
   state.selectedTaskRef = window.MarthaTaskNav && window.MarthaTaskNav.buildCombinedTask
     ? window.MarthaTaskNav.buildCombinedTask(block)
     : null;
+  state.selectedIdx = block.representativeIndex;
+  startNewChatContext("block");
+  state.history[getActiveHistoryKey()] = [];
+  const cms = document.getElementById('cms');
+  if (cms && window.MarthaChatDom && typeof window.MarthaChatDom.getChatHosts === "function") {
+    const hosts = window.MarthaChatDom.getChatHosts(cms, document);
+    hosts.taskHost.innerHTML = '';
+    hosts.messagesHost.innerHTML = '';
+  }
   sel(block.representativeIndex);
 };
 window._sel = (i) => { if (typeof sel === "function") sel(i); };
@@ -2243,6 +2251,49 @@ function plotFromTask() {
   el.scrollTop = el.scrollHeight;
 }
 
+function detectDerivativePlotOrder(text) {
+  const lower = String(text || "").toLowerCase();
+  if (/(második|zweite|second|segunda|2\.)\s+(deriv|ableit|derivat|derivada)/.test(lower)) return 2;
+  return 1;
+}
+
+function plotDerivativeFromTask(promptText) {
+  const t = getActiveTask();
+  if (!t || !window.MarthaPlot || typeof window.MarthaPlot.deriveExpression !== 'function') return false;
+  const funcs = extractFunctions(getPlottableTaskText(t));
+  if (!funcs.length) return false;
+  const order = detectDerivativePlotOrder(promptText);
+  const derived = window.MarthaPlot.deriveExpression(funcs[0].expr, order);
+  if (!derived) return false;
+  const el = document.getElementById('cms');
+  const hosts = window.MarthaChatDom && typeof window.MarthaChatDom.getChatHosts === "function"
+    ? window.MarthaChatDom.getChatHosts(el, document)
+    : { taskHost: null, messagesHost: el };
+  const messagesHost = hosts.messagesHost || el;
+  const msgDiv = document.createElement('div');
+  msgDiv.className = 'mg a';
+  const bu = document.createElement('div');
+  bu.className = 'bu';
+  const sn = document.createElement('div');
+  sn.className = 'sn';
+  sn.textContent = 'MARTHA';
+  bu.appendChild(sn);
+  const lbl = document.createElement('span');
+  const orderLabel = order === 2 ? "f''(x)" : "f'(x)";
+  lbl.textContent = '$' + orderLabel + ' = ' + derived + '$';
+  bu.appendChild(lbl);
+  renderMath(lbl);
+  setTimeout(() => renderMath(lbl), 400);
+  msgDiv.appendChild(bu);
+  const range = guessRange(funcs[0].expr);
+  const pw = document.createElement('div');
+  bu.appendChild(pw);
+  try { drawPlot(derived, range[0], range[1], pw); } catch (ex) { pw.textContent = 'Error: ' + ex.message; }
+  messagesHost.appendChild(msgDiv);
+  el.scrollTop = el.scrollHeight;
+  return true;
+}
+
 function quickSend(text) { document.getElementById('mi').value = text; sendMessage(); }
 function quickAction(action) {
   const prompt = window.MarthaQuickActions && typeof window.MarthaQuickActions.buildQuickActionPrompt === "function"
@@ -2270,8 +2321,11 @@ async function sendMessage() {
   if (!txt) return;
   inp.value = ''; inp.style.height = 'auto';
   const drawWords = ['zeichne','plot','rajzol','draw','dibujar'];
+  const derivativeWords = ['derivált','derivative','ableitung','derivada','f\'','f’','f″','f"'];
+  const lowerTxt = txt.toLowerCase();
   if (drawWords.some(w => txt.toLowerCase().includes(w))) {
     const t = getActiveTask();
+    if (derivativeWords.some(w => lowerTxt.includes(w)) && plotDerivativeFromTask(txt)) return;
     if (extractFunctions(getPlottableTaskText(t)).length) { plotFromTask(); return; }
   }
   const i = state.selectedIdx;

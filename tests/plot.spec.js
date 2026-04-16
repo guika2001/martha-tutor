@@ -3,6 +3,7 @@ const {
   extractFunctions,
   detectPlots,
   validatePlotExpression,
+  deriveExpression,
   guessRange,
 } = require("../plot.js");
 
@@ -48,5 +49,18 @@ describe("plot helpers", () => {
 
   it("uses a positive default range for logarithms", () => {
     expect(guessRange("log(x)")).toEqual([0.1, 10]);
+  });
+
+  it("derives a plottable derivative expression from a task function", () => {
+    global.math = {
+      parse: (expr) => expr,
+      derivative: (node) => {
+        expect(node).toBe("x^3-3*x");
+        return "3 * x ^ 2 - 3";
+      },
+      simplify: (node) => ({ toString: () => node }),
+    };
+    expect(deriveExpression("x^3-3*x", 1)).toBe("3 * x ^ 2 - 3");
+    delete global.math;
   });
 });
