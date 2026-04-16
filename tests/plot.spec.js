@@ -17,6 +17,12 @@ describe("plot helpers", () => {
     expect(match[0].expr).toBe("4000*x*exp(-0.4*x)");
   });
 
+  it("keeps fractional coefficients intact", () => {
+    const match = extractFunctions("f(x)=\\frac{1}{6}\\cdot x^3-\\frac{1}{2}\\cdot x^2+\\frac{28}{3}");
+    expect(match).toHaveLength(1);
+    expect(match[0].expr.replace(/\s+/g, "")).toBe("(1)/(6)*x^3-(1)/(2)*x^2+(28)/(3)");
+  });
+
   it("ignores solved equations that are not functions", () => {
     const match = extractFunctions("f(x)=0 ⇔ x=-√3 ∨ x=0 ∨ x=√3");
     expect(match).toHaveLength(0);
@@ -34,6 +40,10 @@ describe("plot helpers", () => {
 
   it("rejects equality chains as plot input", () => {
     expect(validatePlotExpression("0 ⇔ x=-√3").ok).toBe(false);
+  });
+
+  it("rejects unbalanced parentheses", () => {
+    expect(validatePlotExpression("1)/(6)*x^3").ok).toBe(false);
   });
 
   it("uses a positive default range for logarithms", () => {

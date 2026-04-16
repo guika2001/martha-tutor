@@ -28,6 +28,30 @@
     return /[=<>]|⇔|⇒|≤|≥|!=|:=/.test(expr);
   }
 
+  function hasBalancedParentheses(expr) {
+    let depth = 0;
+    for (const ch of expr) {
+      if (ch === "(") depth++;
+      if (ch === ")") {
+        depth--;
+        if (depth < 0) return false;
+      }
+    }
+    return depth === 0;
+  }
+
+  function unwrapOuterParentheses(expr) {
+    if (!expr.startsWith("(") || !expr.endsWith(")")) return expr;
+    let depth = 0;
+    for (let i = 0; i < expr.length; i++) {
+      const ch = expr[i];
+      if (ch === "(") depth++;
+      if (ch === ")") depth--;
+      if (depth === 0 && i < expr.length - 1) return expr;
+    }
+    return expr.slice(1, -1).trim();
+  }
+
   function cleanupCandidateExpression(expr) {
     let cleaned = expr.trim();
     cleaned = cleaned.replace(/\s+[a-zA-ZáéíóöőúüűÁÉÍÓÖŐÚÜŰäöüÄÖÜß]{2,}.*$/, (match) => {
@@ -37,9 +61,10 @@
     });
     cleaned = cleaned.trim().replace(/[,;.\s]+$/, "");
     cleaned = cleaned.replace(/\s*x\s*(?:in|∈)\s*[a-zA-Zℝ].*$/i, "").trim();
-    cleaned = cleaned.replace(/^\((.*)\)$/, "$1").trim();
+    cleaned = unwrapOuterParentheses(cleaned);
     if (containsUnsupportedRelations(cleaned)) return "";
     if (!cleaned.includes("x")) return "";
+    if (!hasBalancedParentheses(cleaned)) return "";
     cleaned = cleaned.replace(/(\d)([x(])/g, "$1*$2");
     cleaned = cleaned.replace(/([)])(\d)/g, "$1*$2");
     cleaned = cleaned.replace(/([x)])([x(])/g, "$1*$2");
@@ -104,6 +129,9 @@
       .replace(/([x)])([x(])/g, "$1*$2");
     if (!normalized || !normalized.includes("x")) {
       return { ok: false, reason: "Kein plottbarer Funktionsterm mit x gefunden." };
+    }
+    if (!hasBalancedParentheses(normalized)) {
+      return { ok: false, reason: "Der Term hat unbalancierte Klammern." };
     }
     if (containsUnsupportedRelations(normalized)) {
       return { ok: false, reason: "Der Ausdruck ist eine Gleichung oder Relation, keine Funktion." };

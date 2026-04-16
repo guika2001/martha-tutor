@@ -21,6 +21,19 @@
     return cleanText(text, "").replace(/\r/g, "").replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n");
   }
 
+  function canonicalizeForGrouping(text) {
+    const cleaned = normalizeWhitespace(stripTaskLeadIn(text));
+    const core = cleaned.split(/\n\s*\n/)[0] || cleaned;
+    return core
+      .toLowerCase()
+      .replace(/\$+/g, "")
+      .replace(/\\[a-z]+/g, " ")
+      .replace(/[{}[\]()|]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 220);
+  }
+
   function stripTaskLeadIn(text) {
     return normalizeWhitespace(text)
       .replace(/^L[öo]se folgende Aufgabe aus dem NRW Abitur[^\n:]*:\s*/i, "")
@@ -108,6 +121,25 @@
     const levels = [];
     const levelMap = new Map();
     const blockByTaskIndex = {};
+    const variantByTaskIndex = new Map();
+    const variantCounters = new Map();
+
+    tasks.forEach((task, taskIndex) => {
+      const level = cleanText(task.source && task.source.level, "Ohne Stufe");
+      const year = cleanText(task.source && task.source.year, "Ohne Jahr");
+      const topic = cleanText(task.topic, "Sonstige");
+      const blockKey = deriveTaskBlockKey(task);
+      const contentKey = canonicalizeForGrouping(task.question || "");
+      const variantScope = [level, year, topic, blockKey].join("::");
+      if (!variantCounters.has(variantScope)) variantCounters.set(variantScope, []);
+      const known = variantCounters.get(variantScope);
+      let variantIndex = known.findIndex((value) => value === contentKey);
+      if (variantIndex === -1) {
+        known.push(contentKey);
+        variantIndex = known.length - 1;
+      }
+      variantByTaskIndex.set(taskIndex, variantIndex);
+    });
 
     tasks.forEach((task, taskIndex) => {
       const level = cleanText(task.source && task.source.level, "Ohne Stufe");
@@ -115,6 +147,10 @@
       const topic = cleanText(task.topic, "Sonstige");
       const blockKey = deriveTaskBlockKey(task);
       const meta = deriveAssessmentMeta(task);
+      const variantIndex = variantByTaskIndex.get(taskIndex) || 0;
+      const variantScope = [level, year, topic, blockKey].join("::");
+      const variantCount = (variantCounters.get(variantScope) || []).length;
+      const variantLabel = variantCount > 1 ? "Variante " + String.fromCharCode(65 + variantIndex) : "";
 
       if (!levelMap.has(level)) {
         const levelNode = {
@@ -148,7 +184,7 @@
       topicNode.count++;
       topicNode.yearCounts.set(year, (topicNode.yearCounts.get(year) || 0) + 1);
 
-      const blockId = [level, year, topic, blockKey].join("::");
+      const blockId = [level, year, topic, blockKey, variantIndex].join("::");
       if (!topicNode.blockMap.has(blockId)) {
         topicNode.blockMap.set(blockId, {
           id: blockId,
@@ -164,6 +200,7 @@
           examPart: meta.examPart,
           taskType: meta.taskType,
           toolType: meta.toolType,
+          variantLabel,
         });
         topicNode.blocks.push(topicNode.blockMap.get(blockId));
       }
@@ -200,6 +237,7 @@
     if (path.examPart && block.examPart !== path.examPart) return false;
     if (path.taskType && block.taskType !== path.taskType) return false;
     if (path.toolType && block.toolType !== path.toolType) return false;
+    if (path.variantLabel && block.variantLabel !== path.variantLabel) return false;
     return true;
   }
 
@@ -236,20 +274,30 @@
         year: path.year,
         taskType: path.taskType,
         toolType: path.toolType,
+        variantLabel: path.variantLabel,
       })), "examPart", "Alle Prüfungsteile"),
       selectedExamPart: path.examPart || "",
       taskTypes: buildOptionList(levelBlocks.filter((block) => matchesBlockFilters(block, {
         year: path.year,
         examPart: path.examPart,
         toolType: path.toolType,
+        variantLabel: path.variantLabel,
       })), "taskType", "Alle Aufgabentypen"),
       selectedTaskType: path.taskType || "",
       toolTypes: buildOptionList(levelBlocks.filter((block) => matchesBlockFilters(block, {
         year: path.year,
         examPart: path.examPart,
         taskType: path.taskType,
+        variantLabel: path.variantLabel,
       })), "toolType", "Alle Werkzeuge"),
       selectedToolType: path.toolType || "",
+      variants: buildOptionList(levelBlocks.filter((block) => matchesBlockFilters(block, {
+        year: path.year,
+        examPart: path.examPart,
+        taskType: path.taskType,
+        toolType: path.toolType,
+      })), "variantLabel", "Alle Varianten").filter((item) => item.id),
+      selectedVariant: path.variantLabel || "",
     };
 
     if (!path.topic) {
@@ -296,20 +344,30 @@
           year: path.year,
           taskType: path.taskType,
           toolType: path.toolType,
+          variantLabel: path.variantLabel,
         })), "examPart", "Alle Prüfungsteile"),
         selectedExamPart: path.examPart || "",
         taskTypes: buildOptionList(topic.blocks.filter((block) => matchesBlockFilters(block, {
           year: path.year,
           examPart: path.examPart,
           toolType: path.toolType,
+          variantLabel: path.variantLabel,
         })), "taskType", "Alle Aufgabentypen"),
         selectedTaskType: path.taskType || "",
         toolTypes: buildOptionList(topic.blocks.filter((block) => matchesBlockFilters(block, {
           year: path.year,
           examPart: path.examPart,
           taskType: path.taskType,
+          variantLabel: path.variantLabel,
         })), "toolType", "Alle Werkzeuge"),
         selectedToolType: path.toolType || "",
+        variants: buildOptionList(topic.blocks.filter((block) => matchesBlockFilters(block, {
+          year: path.year,
+          examPart: path.examPart,
+          taskType: path.taskType,
+          toolType: path.toolType,
+        })), "variantLabel", "Alle Varianten").filter((item) => item.id),
+        selectedVariant: path.variantLabel || "",
       },
     };
   }
@@ -334,6 +392,7 @@
       examPart: block.examPart,
       taskType: block.taskType,
       toolType: block.toolType,
+      variantLabel: block.variantLabel,
       isSyntheticBlock: true,
     };
   }

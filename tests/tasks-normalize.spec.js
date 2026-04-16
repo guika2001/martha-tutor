@@ -11,8 +11,8 @@ describe("task navigator normalization", () => {
     { task_id: "Pflichtaufgabe 1a", topic: "Analysis", question: "Q1", expected_answer: "", source: { level: "GK", year: "ab-2026" }, points: 2 },
     { task_id: "Pflichtaufgabe 1b", topic: "Analysis", question: "Q2", expected_answer: "", source: { level: "GK", year: "ab-2026" }, points: 3 },
     { task_id: "Pflichtaufgabe 2a", topic: "Analysis", question: "Q3", expected_answer: "", source: { level: "GK", year: "ab-2026" }, points: 2 },
-    { task_id: "Aufgabe a) (1)", topic: "Stochastik", question: "Q4", expected_answer: "A4", source: { level: "LK", year: "2025-Beispiel" }, points: 2 },
-    { task_id: "Aufgabe a) (2)", topic: "Stochastik", question: "Q5", expected_answer: "A5", source: { level: "LK", year: "2025-Beispiel" }, points: 4 },
+    { task_id: "Aufgabe a) (1)", topic: "Stochastik", question: "Löse folgende Aufgabe aus dem NRW Abitur 2025-Beispiel (Mathematik, LK):\n\nEine Funktion f ist gegeben.\n\nQ4", expected_answer: "A4", source: { level: "LK", year: "2025-Beispiel" }, points: 2 },
+    { task_id: "Aufgabe a) (2)", topic: "Stochastik", question: "Löse folgende Aufgabe aus dem NRW Abitur 2025-Beispiel (Mathematik, LK):\n\nEine Funktion f ist gegeben.\n\nQ5", expected_answer: "A5", source: { level: "LK", year: "2025-Beispiel" }, points: 4 },
   ];
 
   it("keeps level groups separate", () => {
