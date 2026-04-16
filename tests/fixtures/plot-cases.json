@@ -1,0 +1,5 @@
+[
+  { "name": "exp_decay", "input": "f(x)=4000*x*e^(-0.4*x)" },
+  { "name": "polynomial", "input": "f(x)=x^3-3*x" },
+  { "name": "fraction", "input": "f(x)=\\frac{1}{2}x^2" }
+]

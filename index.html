@@ -10,12 +10,17 @@
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mathjs@13.2.0/lib/browser/math.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="tasks-normalize.js"></script>
+<script src="plot.js"></script>
+<script src="auth.js"></script>
+<script src="api.js"></script>
 </head>
 <body>
 
 <!-- ── LOGIN ── -->
 <div id="login" style="display:flex;align-items:center;justify-content:center;height:100dvh;background:var(--bg)">
-  <div style="text-align:center;width:280px">
+  <div class="auth-card">
     <div style="font-size:2.5rem;margin-bottom:16px">👩‍🏫</div>
     <div style="font-size:1.2rem;font-weight:700;background:linear-gradient(135deg,var(--ac),#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:4px">Martha</div>
     <div style="font-size:.8rem;color:var(--tx2);margin-bottom:16px">Abitur Mathe Tutor · NRW</div>
@@ -25,9 +30,13 @@
       <button class="lang-btn" data-lang="en" onclick="window._setLang('en')">🇬🇧 EN</button>
       <button class="lang-btn" data-lang="es" onclick="window._setLang('es')">🇪🇸 ES</button>
     </div>
-    <div id="pin-dots" style="display:flex;justify-content:center;gap:12px;margin-bottom:24px"></div>
-    <div id="pin-pad" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:240px;margin:0 auto"></div>
-    <div id="pin-err" style="font-size:.78rem;color:var(--red);margin-top:14px;min-height:20px"></div>
+    <div class="auth-panel">
+      <div id="authStatus" class="auth-title">Bejelentkezés szükséges</div>
+      <div id="authHint" class="auth-copy">A feladatok és a chat használatához Google bejelentkezés kell.</div>
+      <div id="authLoginWrap">
+        <button id="authLoginBtn" class="auth-btn" onclick="window._authSignIn()">Google Sign-In</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -55,8 +64,15 @@
     <button class="lang-btn" data-lang="es" onclick="window._setLang('es')">🇪🇸 ES</button>
   </div>
   <div class="status"><span class="dot" id="sd"></span><span id="st">Verbinde...</span></div>
+    <div class="auth-inline" id="authBar" style="display:none">
+      <div class="auth-inline-copy">
+        <div class="auth-inline-label">Angemeldet</div>
+        <div class="auth-inline-email" id="authUserEmail"></div>
+      </div>
+      <button id="authLogoutBtn" class="auth-inline-btn" onclick="window._authSignOut()">Logout</button>
+    </div>
     <div class="fr" id="ff"></div>
-    <div class="fr">
+  <div class="fr" id="legacyLevelFilters">
       <button class="fb on" onclick="window._sL('all',this)">Alle</button>
       <button class="fb" onclick="window._sL('GK',this)">GK</button>
       <button class="fb" onclick="window._sL('LK',this)">LK</button>
@@ -114,9 +130,9 @@
       <div style="margin-bottom:16px">
         <div id="diff-label" style="font-size:.75rem;color:var(--tx3);font-weight:600;margin-bottom:8px;letter-spacing:.04em">NEHÉZSÉG</div>
         <div style="display:flex;gap:8px">
-          <button class="diff-btn" id="diff-easy"   onclick="window._setDiff('easy')"   title="Egyszerűbb számok, egyértelmű feladatstruktúra" id="diffLabelEasy">🟢 Könnyebb</button>
-          <button class="diff-btn active" id="diff-same" onclick="window._setDiff('same')" title="Az eredeti feladathoz hasonló nehézség" id="diffLabelSame">🟡 Hasonló</button>
-          <button class="diff-btn" id="diff-hard"   onclick="window._setDiff('hard')"   title="Összetettebb függvény, extra részfeladat" id="diffLabelHard">🔴 Nehezebb</button>
+          <button class="diff-btn" id="diff-easy"   onclick="window._setDiff('easy')"   title="Egyszerűbb számok, egyértelmű feladatstruktúra">🟢 Könnyebb</button>
+          <button class="diff-btn active" id="diff-same" onclick="window._setDiff('same')" title="Az eredeti feladathoz hasonló nehézség">🟡 Hasonló</button>
+          <button class="diff-btn" id="diff-hard"   onclick="window._setDiff('hard')"   title="Összetettebb függvény, extra részfeladat">🔴 Nehezebb</button>
         </div>
         <div id="diffDesc" style="font-size:.75rem;color:var(--tx2);margin-top:8px;min-height:16px">
           Az eredeti feladathoz hasonló nehézségű feladatot generál.
@@ -136,8 +152,8 @@
         <span id="genBtnTxt">✨ Generálás</span>
       </button>
       <button class="btn-pri" id="loadPracticeBtn" onclick="window._loadGeneratedTask()"
-        style="display:none;background:var(--grn);color:#000" id="loadPracticeBtnTxt">📚 Betöltés Marthának</button>
-      <button class="btn-sec" onclick="window._closePracticeModal()" class="btn-close-txt">Bezárás</button>
+        style="display:none;background:var(--grn);color:#000">📚 Betöltés Marthának</button>
+      <button class="btn-sec" onclick="window._closePracticeModal()">Bezárás</button>
     </div>
   </div>
 </div>
@@ -185,11 +201,11 @@
 // ══ config.js ══
 // ── config.js ──────────────────────────────────────────────────────────────
 const CONFIG = {
-  PIN_HASH: "53d6668b995a4117d05d7799f6563672f4659d05f9f9fd45f961164de256b5d0",
-  PIN_LEN: 4,
   API_URL: "https://martha-proxy.98ktndkptv.workers.dev",
   MODEL: "llama-3.3-70b-versatile",
   VISION_MODEL: "meta-llama/llama-4-scout-17b-16e-instruct",
+  SUPABASE_URL: "",
+  SUPABASE_ANON_KEY: "",
 };
 
 const LANGUAGES = {
@@ -211,7 +227,6 @@ const LANGUAGES = {
       solution_page_title: "Das ist eine L\u00f6sungsseite", solution_page_hint: "Bitte eine Aufgabenseite hochladen.",
       welcome_title: "Hallo, ich bin Martha!",
       welcome_sub: "Wähle links eine Aufgabe — ich erkläre dir Schritt für Schritt.",
-      wrong_pin: "Falscher PIN. Versuche es nochmal.",
       greeting: "Hallo! \ud83d\udc4b Ich bin Martha, deine Mathe-Nachhilfelehrerin.\n\nSchau dir die Aufgabe oben an. Wie m\u00f6chtest du anfangen?\nDu kannst mir sagen, was du schon wei\u00dft, oder einen \ud83d\udca1 Tipp verlangen.",
       verified: "\u2713 Mathematisch verifiziert", math_error: "Mathematischer Fehler, erneuter Versuch...",
       all_failed: " Versuche ohne Erfolg.", all_failed_hint: "Versuche eine andere Aufgabe oder \u00e4ndere den Schwierigkeitsgrad.",
@@ -244,7 +259,6 @@ Aufgabe auf Deutsch.`,
       solution_page_title: "Ez egy megoldásoldal", solution_page_hint: "Kérlek egy feladatoldalt tölts fel!",
       welcome_title: "Szia, Martha vagyok!",
       welcome_sub: "Válassz egy feladatot balról — lépésről lépésre magyarázom.",
-      wrong_pin: "Hibás PIN. Próbáld újra.",
       greeting: "Szia! \ud83d\udc4b Martha vagyok, a matektanárod.\n\nNézd meg a fenti feladatot. Hogyan szeretnéd elkezdeni?\nMondhatod, mit tudsz már, vagy kérhetsz \ud83d\udca1 tippet.",
       verified: "\u2713 Matematikailag ellenőrzött", math_error: "Matematikai hiba, újrapróbálás...",
       all_failed: " próbálkozás sikertelen.", all_failed_hint: "Próbálj másik feladatot, vagy változtass a nehézségen.",
@@ -277,7 +291,6 @@ A feladatot magyarul fogalmazd meg.`,
       solution_page_title: "This is a solutions page", solution_page_hint: "Please upload a task page instead.",
       welcome_title: "Hello, I'm Martha!",
       welcome_sub: "Choose a task on the left — I'll explain it step by step.",
-      wrong_pin: "Wrong PIN. Please try again.",
       greeting: "Hello! \ud83d\udc4b I'm Martha, your math tutor.\n\nTake a look at the task above. How would you like to start?\nYou can tell me what you already know, or ask for a \ud83d\udca1 hint.",
       verified: "\u2713 Mathematically verified", math_error: "Math error, retrying...",
       all_failed: " attempts failed.", all_failed_hint: "Try a different task or change the difficulty level.",
@@ -310,7 +323,6 @@ Write the task in English.`,
       solution_page_title: "Esta es una página de soluciones", solution_page_hint: "Por favor sube una página de ejercicios.",
       welcome_title: "¡Hola, soy Martha!",
       welcome_sub: "Elige un ejercicio a la izquierda — te lo explicaré paso a paso.",
-      wrong_pin: "PIN incorrecto. Inténtalo de nuevo.",
       greeting: "¡Hola! \ud83d\udc4b Soy Martha, tu profesora de matemáticas.\n\nMira el ejercicio de arriba. ¿Cómo quieres empezar?\nPuedes decirme lo que ya sabes o pedir una \ud83d\udca1 pista.",
       verified: "\u2713 Verificado matemáticamente", math_error: "Error matemático, reintentando...",
       all_failed: " intentos fallidos.", all_failed_hint: "Prueba con otro ejercicio o cambia el nivel de dificultad.",
@@ -394,8 +406,27 @@ const state = {
   topicFilter: "Alle",
   levelFilter: "all",
   streaming: false,
-  storedPin: "",
+  user: null,
+  taskIndex: null,
+  currentYear: "",
+  currentTopic: "",
+  selectedBlockId: "",
+  selectedTaskRef: null,
 };
+
+function getActiveTask() {
+  return state.selectedTaskRef || state.tasks[state.selectedIdx] || null;
+}
+
+function getActiveHistoryKey() {
+  return state.selectedBlockId || String(state.selectedIdx);
+}
+
+function refreshTaskIndex() {
+  if (window.MarthaTaskNav) {
+    state.taskIndex = window.MarthaTaskNav.buildTaskIndex(state.tasks);
+  }
+}
 
 
 // ══ math.js ══
@@ -722,6 +753,14 @@ function renderPlotsFromText(text, containerEl, label = "📈 Függvény:") {
   containerEl.appendChild(section);
 }
 
+if (window.MarthaPlot) {
+  extractFunctions = window.MarthaPlot.extractFunctions;
+  guessRange = window.MarthaPlot.guessRange;
+  detectPlots = window.MarthaPlot.detectPlots;
+  drawPlot = window.MarthaPlot.drawPlot;
+  renderPlotsFromText = window.MarthaPlot.renderPlotsFromText;
+}
+
 
 // ══ api.js ══
 // ── api.js ──────────────────────────────────────────────────────────────────
@@ -749,16 +788,12 @@ async function* streamGroq(messages, taskContext) {
   const fullSys = getSystemPrompt() + "\n\n--- AKTUELLE AUFGABE ---\n" + taskContext;
   const msgs = [{ role: "system", content: fullSys }, ...messages];
 
-  const resp = await fetch(CONFIG.API_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: CONFIG.MODEL,
-      messages: msgs,
-      stream: true,
-      temperature: 0.4,
-      max_tokens: 1500,
-    }),
+  const resp = await window.MarthaApi.authorizedProxyFetch({
+    model: CONFIG.MODEL,
+    messages: msgs,
+    stream: true,
+    temperature: 0.4,
+    max_tokens: 1500,
   });
 
   if (!resp.ok) {
@@ -793,19 +828,15 @@ async function* streamGroq(messages, taskContext) {
 
 /** Single non-streaming call — returns full response text */
 async function callGroq({ systemPrompt, userPrompt, temperature = 0.7, maxTokens = 900, model = null }) {
-  const resp = await fetch(CONFIG.API_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: model || CONFIG.MODEL,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-      stream: false,
-      temperature,
-      max_tokens: maxTokens,
-    }),
+  const resp = await window.MarthaApi.authorizedProxyFetch({
+    model: model || CONFIG.MODEL,
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt },
+    ],
+    stream: false,
+    temperature,
+    max_tokens: maxTokens,
   });
   if (!resp.ok) throw new Error(`API error ${resp.status}`);
   const data = await resp.json();
@@ -818,10 +849,12 @@ async function streamToElement({ systemPrompt, userContent, model, targetEl, tem
     { role: "system", content: systemPrompt },
     { role: "user", content: userContent },
   ];
-  const resp = await fetch(CONFIG.API_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ model: model || CONFIG.MODEL, messages, stream: true, temperature, max_tokens: maxTokens }),
+  const resp = await window.MarthaApi.authorizedProxyFetch({
+    model: model || CONFIG.MODEL,
+    messages,
+    stream: true,
+    temperature,
+    max_tokens: maxTokens,
   });
   if (!resp.ok) {
     const err = await resp.json().catch(() => ({}));
@@ -859,6 +892,7 @@ async function init() {
   try {
     const r = await fetch("tasks.json");
     state.tasks = await r.json();
+    refreshTaskIndex();
     document.getElementById("sd").className = "dot ok";
     document.getElementById("st").textContent = getUI().ready + " · " + CONFIG.MODEL;
     renderFilters();
@@ -872,6 +906,9 @@ async function init() {
 function injectAndSelect(task) {
   state.tasks.unshift(task);
   if (state.selectedIdx >= 0) state.selectedIdx++;
+  refreshTaskIndex();
+  state.selectedTaskRef = null;
+  state.selectedBlockId = "";
   state.history[0] = [];
   renderFilters();
   applyFilters();
@@ -879,21 +916,34 @@ function injectAndSelect(task) {
 }
 
 function renderFilters() {
-  const counts = {};
-  state.tasks.forEach(t => { const k = t.topic || "?"; counts[k] = (counts[k] || 0) + 1; });
   const el = document.getElementById("ff");
-  let h = `<button class="fb on" onclick="window._sT('Alle',this)">Alle (${state.tasks.length})</button>`;
-  Object.entries(counts).sort((a, b) => b[1] - a[1]).forEach(([k, v]) => {
-    h += `<button class="fb" onclick="window._sT('${k}',this)">${k} (${v})</button>`;
-  });
-  el.innerHTML = h;
+  const path = [];
+  if (state.levelFilter !== "all") path.push(state.levelFilter);
+  if (state.currentYear) path.push(state.currentYear);
+  if (state.currentTopic) path.push(state.currentTopic);
+  el.innerHTML = "";
+  const back = document.createElement("button");
+  back.className = "fb";
+  back.textContent = path.length ? "← Zurück" : "Navigator";
+  back.disabled = !path.length;
+  back.onclick = () => window._navBack();
+  el.appendChild(back);
+  const label = document.createElement("div");
+  label.className = "nav-path";
+  label.textContent = path.length ? path.join(" · ") : "GK/LK → Jahr → Thema → Aufgabenblock";
+  el.appendChild(label);
 }
 
 function applyFilters() {
-  state.filtered = state.tasks.filter(t => {
-    if (state.topicFilter !== "Alle" && t.topic !== state.topicFilter) return false;
-    if (state.levelFilter !== "all" && (t.source || {}).level !== state.levelFilter) return false;
-    return true;
+  if (!state.taskIndex || !window.MarthaTaskNav) {
+    state.filtered = [];
+    renderTaskList();
+    return;
+  }
+  state.filtered = window.MarthaTaskNav.getVisibleItems(state.taskIndex, {
+    level: state.levelFilter === "all" ? "" : state.levelFilter,
+    year: state.currentYear,
+    topic: state.currentTopic,
   });
   renderTaskList();
 }
@@ -916,39 +966,92 @@ function topicIcon(topic) {
 
 function renderTaskList() {
   const el = document.getElementById("tl");
-  if (!state.filtered.length) {
-    el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--tx3)">Keine Aufgaben</div>';
+  const view = state.filtered;
+  if (!view || !view.items || !view.items.length) {
+    el.innerHTML = '<div class="ts-empty">Keine Aufgaben</div>';
     return;
   }
-  el.innerHTML = state.filtered.map(t => {
-    const ri = state.tasks.indexOf(t);
-    const sr = t.source || {};
-    const sel_class = ri === state.selectedIdx ? "sel" : "";
-    return `<div class="ti ${sel_class}" onclick="window._sel(${ri})">
-      <div class="tic ${topicClass(t.topic)}">${topicIcon(t.topic)}</div>
-      <div class="tit">
-        <div class="n">${esc(t.task_id || "Aufgabe")}</div>
-        <div class="m">${esc(t.topic || "")} · ${sr.level || ""} · ${sr.year || ""}</div>
-      </div>
-      ${t.points ? `<div class="tip">${t.points} BE</div>` : ""}
-    </div>`;
-  }).join("");
+  el.innerHTML = "";
+  view.items.forEach((item) => {
+    const row = document.createElement("div");
+    row.className = "ti";
+    const icon = document.createElement("div");
+    const iconTopic = view.kind === "block" ? item.topic : item.label;
+    icon.className = "tic " + topicClass(iconTopic);
+    icon.textContent = view.kind === "level" ? item.label : topicIcon(iconTopic);
+    const title = document.createElement("div");
+    title.className = "tit";
+    const name = document.createElement("div");
+    name.className = "n";
+    name.textContent = item.label;
+    const meta = document.createElement("div");
+    meta.className = "m";
+    if (view.kind === "level") meta.textContent = item.count + " Aufgaben";
+    else if (view.kind === "year") meta.textContent = (state.levelFilter === "all" ? item.id + " · " : "") + item.count + " Aufgaben";
+    else if (view.kind === "topic") meta.textContent = item.count + " Aufgaben";
+    else meta.textContent = item.taskIndexes.length + " Teilaufgaben · " + item.year;
+    title.appendChild(name);
+    title.appendChild(meta);
+    row.appendChild(icon);
+    row.appendChild(title);
+    const badge = document.createElement("div");
+    badge.className = "tip";
+    badge.textContent = view.kind === "block" ? item.taskIndexes.length + "x" : item.count;
+    row.appendChild(badge);
+
+    if (view.kind === "level") row.onclick = () => window._sL(item.id, null);
+    else if (view.kind === "year") row.onclick = () => window._navYear(item.id);
+    else if (view.kind === "topic") row.onclick = () => window._navTopic(item.id);
+    else {
+      if (item.id === state.selectedBlockId) row.classList.add("sel");
+      row.onclick = () => window._selectBlock(item.id);
+    }
+    el.appendChild(row);
+  });
 }
 
 // Expose filter functions to inline onclick handlers
 window._sT = (topic, btn) => {
   state.topicFilter = topic;
-  btn.parentElement.querySelectorAll(".fb").forEach(x => x.classList.remove("on"));
-  btn.classList.add("on");
   applyFilters();
 };
 window._sL = (level, btn) => {
   state.levelFilter = level;
-  btn.parentElement.querySelectorAll(".fb").forEach(x => x.classList.remove("on"));
-  btn.classList.add("on");
+  state.currentYear = "";
+  state.currentTopic = "";
+  state.selectedBlockId = "";
+  state.selectedTaskRef = null;
+  const filterRow = document.getElementById("legacyLevelFilters");
+  if (filterRow) {
+    filterRow.querySelectorAll(".fb").forEach(x => x.classList.remove("on"));
+    const target = btn || Array.from(filterRow.querySelectorAll(".fb")).find((x) => x.textContent === level);
+    if (target) target.classList.add("on");
+  }
   applyFilters();
 };
-// window._sel is set by chat.js — use lazy lookup so it always finds the latest binding
+window._navYear = (year) => { state.currentYear = year; state.currentTopic = ""; state.selectedBlockId = ""; state.selectedTaskRef = null; applyFilters(); };
+window._navTopic = (topic) => { state.currentTopic = topic; state.selectedBlockId = ""; state.selectedTaskRef = null; applyFilters(); };
+window._navBack = () => {
+  if (state.currentTopic) state.currentTopic = "";
+  else if (state.currentYear) state.currentYear = "";
+  else if (state.levelFilter !== "all") state.levelFilter = "all";
+  state.selectedBlockId = "";
+  state.selectedTaskRef = null;
+  applyFilters();
+};
+window._selectBlock = (blockId) => {
+  const block = state.taskIndex.levels
+    .flatMap((level) => level.years)
+    .flatMap((year) => year.topics)
+    .flatMap((topic) => topic.blocks)
+    .find((entry) => entry.id === blockId);
+  if (!block) return;
+  state.selectedBlockId = blockId;
+  state.selectedTaskRef = window.MarthaTaskNav && window.MarthaTaskNav.buildCombinedTask
+    ? window.MarthaTaskNav.buildCombinedTask(block)
+    : null;
+  sel(block.representativeIndex);
+};
 window._sel = (i) => { if (typeof sel === "function") sel(i); };
 
 
@@ -971,22 +1074,18 @@ async function getTranslatedQuestion(i) {
 
   try {
     const targetLang = lang === "hu" ? "Hungarian" : lang === "en" ? "English" : "Spanish";
-    const resp = await fetch(CONFIG.API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: CONFIG.MODEL,
-        messages: [{
-          role: "system",
-          content: "You are a mathematical text translator. Output ONLY the translated text — no explanations, no meta-commentary, no quotes around the result. Translate natural language to " + targetLang + ". Keep ALL math expressions unchanged: f(x), x ∈ ℝ, formulas, numbers, variable names."
-        }, {
-          role: "user",
-          content: "Translate this math task to " + targetLang + ". Output ONLY the translation, nothing else:\n\n" + t.question
-        }],
-        stream: false,
-        temperature: 0.1,
-        max_tokens: 600,
-      })
+    const resp = await window.MarthaApi.authorizedProxyFetch({
+      model: CONFIG.MODEL,
+      messages: [{
+        role: "system",
+        content: "You are a mathematical text translator. Output ONLY the translated text — no explanations, no meta-commentary, no quotes around the result. Translate natural language to " + targetLang + ". Keep ALL math expressions unchanged: f(x), x ∈ ℝ, formulas, numbers, variable names."
+      }, {
+        role: "user",
+        content: "Translate this math task to " + targetLang + ". Output ONLY the translation, nothing else:\n\n" + t.question
+      }],
+      stream: false,
+      temperature: 0.1,
+      max_tokens: 600,
     });
     const data = await resp.json();
     const translated = data.choices?.[0]?.message?.content || null;
@@ -1002,7 +1101,12 @@ async function getTranslatedQuestion(i) {
 
 function sel(i) {
   state.selectedIdx = i;
-  const t = state.tasks[i], sr = t.source || {};
+  if (!state.selectedBlockId && window.MarthaTaskNav) {
+    state.selectedBlockId = window.MarthaTaskNav.findBlockIdByTaskIndex(state.taskIndex, i);
+    state.selectedTaskRef = null;
+  }
+  const t = getActiveTask(), sr = (t && t.source) || {};
+  if (!t) return;
   document.getElementById('cht').textContent = t.task_id || 'Aufgabe';
   document.getElementById('chs').textContent = (t.topic||'') + ' \u00b7 ' + (sr.level||'') + (t.points ? ' \u00b7 ' + t.points + ' BE' : '');
   document.getElementById('cin').style.display = 'flex';
@@ -1014,8 +1118,9 @@ function sel(i) {
   if (cms) cms.style.display = 'block';
   const funcs = extractFunctions((t.question||'') + ' ' + (t.expected_answer||''));
   document.getElementById('btn-plot').style.display = funcs.length ? 'inline-block' : 'none';
-  document.getElementById('btn-practice').style.display = 'inline-block';
-  if (!state.history[i]) state.history[i] = [];
+  document.getElementById('btn-practice').style.display = t.isSyntheticBlock ? 'none' : 'inline-block';
+  const historyKey = getActiveHistoryKey();
+  if (!state.history[historyKey]) state.history[historyKey] = [];
   renderChat(i);
   renderTaskList();
   setTimeout(() => document.getElementById('mi').focus(), 300);
@@ -1026,10 +1131,11 @@ function goBack() { document.getElementById('app').classList.remove('co'); }
 async function renderChat(i) {
   const el = document.getElementById('cms');
   if (!el) return;
-  const t = state.tasks[i], h = state.history[i] || [];
+  const t = getActiveTask(), h = state.history[getActiveHistoryKey()] || [];
+  if (!t) return;
 
   // Try to get translated question (non-blocking — uses DE as fallback)
-  const translated = await getTranslatedQuestion(i);
+  const translated = t.isSyntheticBlock ? null : await getTranslatedQuestion(i);
   const questionSource = translated || t.question || 'Kein Text.';
   const questionLatex = plainMathToLatex(questionSource);
 
@@ -1084,7 +1190,8 @@ async function renderChat(i) {
 
 function plotFromTask() {
   if (state.selectedIdx < 0) return;
-  const t = state.tasks[state.selectedIdx];
+  const t = getActiveTask();
+  if (!t) return;
   const funcs = extractFunctions((t.question||'') + ' ' + (t.expected_answer||''));
   const el = document.getElementById('cms');
   if (!funcs.length) { quickSend(getUI().plot); return; }
@@ -1116,12 +1223,13 @@ async function sendMessage() {
   inp.value = ''; inp.style.height = 'auto';
   const drawWords = ['zeichne','plot','rajzol','draw','dibujar'];
   if (drawWords.some(w => txt.toLowerCase().includes(w))) {
-    const t = state.tasks[state.selectedIdx];
+    const t = getActiveTask();
     if (extractFunctions((t.question||'')+(t.expected_answer||'')).length) { plotFromTask(); return; }
   }
   const i = state.selectedIdx;
-  if (!state.history[i]) state.history[i] = [];
-  state.history[i].push({role:'user', content:txt});
+  const historyKey = getActiveHistoryKey();
+  if (!state.history[historyKey]) state.history[historyKey] = [];
+  state.history[historyKey].push({role:'user', content:txt});
   const el = document.getElementById('cms');
   el.innerHTML += '<div class="mg u"><div class="bu">' + esc(txt) + '</div></div>';
   const tid = 't' + Date.now();
@@ -1130,15 +1238,15 @@ async function sendMessage() {
   state.streaming = true;
   document.getElementById('sbt').disabled = true;
   let full = '';
-  const ctx = buildContext(state.tasks[i]);
+  const ctx = buildContext(getActiveTask());
   const atEl = document.querySelector('#' + tid + ' .at');
   try {
-    for await (const token of streamGroq(state.history[i], ctx)) {
+    for await (const token of streamGroq(state.history[historyKey], ctx)) {
       full += token; atEl.textContent = full; el.scrollTop = el.scrollHeight;
     }
   } catch(ex) { full = full || 'Verbindungsfehler: ' + ex.message; }
   if (full) {
-    state.history[i].push({role:'assistant', content:full});
+    state.history[historyKey].push({role:'assistant', content:full});
     const lastMsg = document.getElementById(tid);
     if (lastMsg) {
       const at = lastMsg.querySelector('.at');
@@ -1163,68 +1271,40 @@ window._handleKeydown = handleKeydown;
 window._autoGrow = autoGrow;
 
 
-// ══ login.js ══
-// ── login.js ─────────────────────────────────────────────────────────────────
-// PIN login screen logic. No business logic here, only auth flow.
+// ══ auth-gate.js ══
+// ── auth-gate.js ─────────────────────────────────────────────────────────────
+// Real auth gate: the app stays hidden until Supabase auth resolves.
 
-let pinEntry = "";
+let _appInitialized = false;
 
-async function hashPin(pin) {
-  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(pin));
-  return [...new Uint8Array(buf)].map(x => x.toString(16).padStart(2, "0")).join("");
-}
-
-function renderPinPad() {
-  const dots = document.getElementById("pin-dots");
-  dots.innerHTML = "";
-  for (let i = 0; i < CONFIG.PIN_LEN; i++) {
-    const d = document.createElement("div");
-    d.className = "pin-dot" + (i < pinEntry.length ? " filled" : "");
-    dots.appendChild(d);
-  }
-
-  const pad = document.getElementById("pin-pad");
-  pad.innerHTML = "";
-  [1, 2, 3, 4, 5, 6, 7, 8, 9, null, 0, "del"].forEach(k => {
-    if (k === null) { pad.appendChild(document.createElement("div")); return; }
-    const btn = document.createElement("button");
-    btn.className = "pin-key" + (k === "del" ? " del" : "");
-    btn.textContent = k === "del" ? "⌫" : k;
-    btn.onclick = () => handlePinKey(k);
-    pad.appendChild(btn);
-  });
-}
-
-function handlePinKey(k) {
-  if (k === "del") { pinEntry = pinEntry.slice(0, -1); renderPinPad(); return; }
-  if (pinEntry.length >= CONFIG.PIN_LEN) return;
-  pinEntry += k;
-  renderPinPad();
-  if (pinEntry.length === CONFIG.PIN_LEN) setTimeout(() => tryPin(pinEntry), 200);
-}
-
-async function tryPin(pin) {
-  const hash = await hashPin(pin);
-  if (hash === CONFIG.PIN_HASH) {
-    state.storedPin = pin;
-    document.getElementById("login").style.display = "none";
-    document.getElementById("app").style.display = "flex";
+function showAppForSession(session) {
+  state.user = session && session.user ? session.user : null;
+  document.getElementById("login").style.display = "none";
+  document.getElementById("app").style.display = "flex";
+  if (!_appInitialized) {
+    _appInitialized = true;
     init();
-  } else {
-    pinEntry = "";
-    document.getElementById("pin-err").textContent = getUI().wrong_pin;
-    document.querySelectorAll(".pin-dot").forEach(d => d.classList.add("wrong"));
-    setTimeout(() => {
-      document.getElementById("pin-err").textContent = "";
-      renderPinPad();
-    }, 1200);
   }
 }
 
-function initLogin() {
+function showSignedOutView() {
+  state.user = null;
+  document.getElementById("login").style.display = "flex";
+  document.getElementById("app").style.display = "none";
+}
+
+async function initAuthGate() {
   loadSavedLanguage();
   applyUILanguage();
-  renderPinPad();
+  if (!window.MarthaAuth) {
+    const authStatus = document.getElementById("authStatus");
+    if (authStatus) authStatus.textContent = "Auth script fehlt";
+    return;
+  }
+  await window.MarthaAuth.initAuth({
+    onAuthenticated: (session) => showAppForSession(session),
+    onSignedOut: () => showSignedOutView(),
+  });
 }
 
 
@@ -1941,9 +2021,12 @@ async function analyzeBatch() {
       } else { continue; }
 
       // Non-streaming call for batch
-      const resp = await fetch(CONFIG.API_URL, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ model, messages: [{ role:"system", content:sysMsg }, { role:"user", content:userContent }], stream:false, temperature:0.1, max_tokens:1000 }),
+      const resp = await window.MarthaApi.authorizedProxyFetch({
+        model,
+        messages: [{ role:"system", content:sysMsg }, { role:"user", content:userContent }],
+        stream:false,
+        temperature:0.1,
+        max_tokens:1000,
       });
       const data = await resp.json();
       const full = data.choices?.[0]?.message?.content || "";
@@ -2048,12 +2131,14 @@ window._handleDrop = handleDrop;
 window._handleFileInput = handleFileInput;
 window._analyzeUpload = analyzeUpload;
 window._loadExtractedTask = loadExtractedTask;
+window._authSignIn = () => window.MarthaAuth && window.MarthaAuth.signInWithGoogle();
+window._authSignOut = () => window.MarthaAuth && window.MarthaAuth.signOut();
 
 
 // ── Startup ──
-loadSavedLanguage();
-applyUILanguage();
-initLogin();
+const _legacyFilterRow = document.getElementById("legacyLevelFilters");
+if (_legacyFilterRow) _legacyFilterRow.style.display = "flex";
+initAuthGate();
 let _kp = 0;
 const _kt = setInterval(() => {
   _kp++;

@@ -1,0 +1,27 @@
+{
+  "name": "3.0",
+  "version": "1.0.0",
+  "description": "New working directory for the hardened version of Martha Tutor.",
+  "main": "plot.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "vitest run --globals tests/*.spec.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/guika2001/martha-tutor.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/guika2001/martha-tutor/issues"
+  },
+  "homepage": "https://github.com/guika2001/martha-tutor#readme",
+  "devDependencies": {
+    "vitest": "^4.1.4"
+  }
+}
