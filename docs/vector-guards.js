@@ -94,6 +94,36 @@
     return { base, direction };
   }
 
+  function parsePlaneEquationWithLabel(text = "", target = "E") {
+    const normalized = normalize(text);
+    const generalRegex = new RegExp(`\\b${target}\\s*:\\s*([+-]?\\d*)x\\s*([+-]\\s*\\d*)y\\s*([+-]\\s*\\d*)z\\s*=\\s*([+-]?\\d+(?:\\.\\d+)?)`, "i");
+    let match = normalized.match(generalRegex);
+    if (match) {
+      const coeff = (raw, fallbackSign = 1) => {
+        const cleaned = raw.replace(/\s+/g, "");
+        if (cleaned === "+" || cleaned === "") return fallbackSign;
+        if (cleaned === "-") return -1;
+        return Number(cleaned);
+      };
+      return {
+        a: coeff(match[1]),
+        b: coeff(match[2]),
+        c: coeff(match[3]),
+        d: Number(match[4]),
+      };
+    }
+    const axisRegex = new RegExp(`\\b${target}\\s*:\\s*([xyz])\\s*=\\s*([+-]?\\d+(?:\\.\\d+)?)`, "i");
+    match = normalized.match(axisRegex);
+    if (!match) return null;
+    const axis = match[1].toLowerCase();
+    const constant = Number(match[2]);
+    return axis === "x"
+      ? { a: 1, b: 0, c: 0, d: constant }
+      : axis === "y"
+        ? { a: 0, b: 1, c: 0, d: constant }
+        : { a: 0, b: 0, c: 1, d: constant };
+  }
+
   function pointOnLine(point, line) {
     let lambda = null;
     for (let i = 0; i < 3; i++) {
@@ -108,6 +138,21 @@
       if (!almostZero(current - lambda, 1e-5)) return false;
     }
     return true;
+  }
+
+  function classifyLineLineRelation(lineLeft, lineRight) {
+    const directionCross = cross(lineLeft.direction, lineRight.direction);
+    if (directionCross.every((value) => almostZero(value))) return "parallel";
+    const baseDiff = lineRight.base.map((value, index) => value - lineLeft.base[index]);
+    if (!almostZero(dot(baseDiff, directionCross))) return "skew";
+    return "intersecting";
+  }
+
+  function classifyLinePlaneRelation(line, plane) {
+    const denominator = plane.a * line.direction[0] + plane.b * line.direction[1] + plane.c * line.direction[2];
+    const offset = plane.a * line.base[0] + plane.b * line.base[1] + plane.c * line.base[2] - plane.d;
+    if (almostZero(denominator)) return almostZero(offset) ? "contained" : "parallel";
+    return "intersecting";
   }
 
   function verifyParallelLinesClaim({ task, draft }) {
@@ -162,8 +207,50 @@
     };
   }
 
+  function verifyLineLineRelationClaim({ task, draft }) {
+    const text = normalize(draft);
+    if (!/\b(schneiden sich|parallel|windschief)\b/i.test(text)) return { ok: true, issues: [] };
+    const left = parseLineBase(task?.question || "", "g");
+    const right = parseLineBase(task?.question || "", "h");
+    if (!left || !right) return { ok: true, issues: [] };
+    const actual = classifyLineLineRelation(left, right);
+    const claimed = /\bparallel\b/i.test(text)
+      ? "parallel"
+      : /\bwindschief\b/i.test(text)
+        ? "skew"
+        : "intersecting";
+    if (actual === claimed) return { ok: true, issues: [] };
+    return {
+      ok: false,
+      issues: [{ code: "vector-line-line-check-failed", message: "Die behauptete Lagebeziehung der Geraden passt nicht zu den Gleichungen." }],
+    };
+  }
+
+  function verifyLinePlaneRelationClaim({ task, draft }) {
+    const text = normalize(draft);
+    if (!/\b(schneidet|parallel|liegt in)\b/i.test(text)) return { ok: true, issues: [] };
+    const line = parseLineBase(task?.question || "", "g");
+    const plane = parsePlaneEquationWithLabel(task?.question || "", "E");
+    if (!line || !plane) return { ok: true, issues: [] };
+    const actual = classifyLinePlaneRelation(line, plane);
+    const claimed = /\bliegt in\b/i.test(text)
+      ? "contained"
+      : /\bparallel\b/i.test(text)
+        ? "parallel"
+        : "intersecting";
+    if (actual === claimed) return { ok: true, issues: [] };
+    return {
+      ok: false,
+      issues: [{ code: "vector-line-plane-check-failed", message: "Die behauptete Lagebeziehung von Gerade und Ebene passt nicht zu den Gleichungen." }],
+    };
+  }
+
   const api = {
+    classifyLineLineRelation,
+    classifyLinePlaneRelation,
     extractLineDirections,
+    verifyLineLineRelationClaim,
+    verifyLinePlaneRelationClaim,
     verifyParallelLinesClaim,
     verifyOrthogonalityClaim,
     verifyPointOnLineClaim,

@@ -65,6 +65,43 @@ describe("vector redraw model", () => {
     expect(model.validationHint.confidence).toBe("medium");
   });
 
+  it("classifies a line-line redraw as intersecting when the two lines meet", () => {
+    const model = buildVectorRedrawModel({
+      task_id: "Line intersection task",
+      topic: "Vektorielle Geometrie",
+      question: "Gegeben sind die Geraden g: x=(0|0|0)+r(1|0|0) und h: x=(0|0|0)+s(0|1|0). Bestimmen Sie die Lagebeziehung.",
+    });
+
+    expect(model.geometryRelations).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "line-line",
+          status: "intersecting",
+          labels: ["g", "h"],
+        }),
+      ])
+    );
+  });
+
+  it("classifies a line-plane redraw as intersecting when a line crosses the plane", () => {
+    const model = buildVectorRedrawModel({
+      task_id: "Line plane task",
+      topic: "Vektorielle Geometrie",
+      question: "Gegeben sind die Gerade g: x=(0|0|1)+r(0|0|-1) und die Ebene E: z=0. Untersuchen Sie die Lagebeziehung von g und E.",
+    });
+
+    expect(model.geometryRelations).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "line-plane",
+          status: "intersecting",
+          lineLabel: "g",
+          planeLabel: "E",
+        }),
+      ])
+    );
+  });
+
   it("stays conservative when no line or vector relation is explicit enough", () => {
     const model = buildVectorRedrawModel({
       task_id: "Single point task",

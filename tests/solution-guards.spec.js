@@ -67,6 +67,30 @@ describe("solution guards", () => {
     expect(result.issues.some((issue) => issue.code === "vector-parallel-check-failed")).toBe(true);
   });
 
+  it("blocks wrong line-line relation claims through the main solution guard", () => {
+    const result = evaluateDraft({
+      task: {
+        question: "Gegeben sind die Geraden g: x=(0|0|1)+r(1|0|0) und h: x=(0|1|0)+s(0|1|0).",
+      },
+      draft: "Die Geraden g und h schneiden sich.",
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.issues.some((issue) => issue.code === "vector-line-line-check-failed")).toBe(true);
+  });
+
+  it("blocks wrong line-plane relation claims through the main solution guard", () => {
+    const result = evaluateDraft({
+      task: {
+        question: "Gegeben sind die Gerade g: x=(0|0|1)+r(1|0|0) und die Ebene E: z=0.",
+      },
+      draft: "Die Gerade g schneidet die Ebene E.",
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.issues.some((issue) => issue.code === "vector-line-plane-check-failed")).toBe(true);
+  });
+
   it("measures overlap with reference tokens", () => {
     const score = compareWithReference(
       "x=-2 oder x=2",

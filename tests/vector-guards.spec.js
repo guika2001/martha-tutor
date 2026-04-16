@@ -1,5 +1,7 @@
 const {
   extractLineDirections,
+  verifyLineLineRelationClaim,
+  verifyLinePlaneRelationClaim,
   verifyParallelLinesClaim,
   verifyOrthogonalityClaim,
   verifyPointOnLineClaim,
@@ -106,5 +108,51 @@ describe("vector guards", () => {
 
     expect(result.ok).toBe(false);
     expect(result.issues[0].code).toBe("point-plane-check-failed");
+  });
+
+  it("accepts a correct intersecting line-line claim", () => {
+    const result = verifyLineLineRelationClaim({
+      task: {
+        question: "Gegeben sind die Geraden g: x=(0|0|0)+r(1|0|0) und h: x=(0|0|0)+s(0|1|0). Untersuchen Sie die Lagebeziehung.",
+      },
+      draft: "Die Geraden g und h schneiden sich.",
+    });
+
+    expect(result.ok).toBe(true);
+  });
+
+  it("rejects a wrong line-line relation claim", () => {
+    const result = verifyLineLineRelationClaim({
+      task: {
+        question: "Gegeben sind die Geraden g: x=(0|0|1)+r(1|0|0) und h: x=(0|1|0)+s(0|1|0). Untersuchen Sie die Lagebeziehung.",
+      },
+      draft: "Die Geraden g und h schneiden sich.",
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.issues[0].code).toBe("vector-line-line-check-failed");
+  });
+
+  it("accepts a correct intersecting line-plane claim", () => {
+    const result = verifyLinePlaneRelationClaim({
+      task: {
+        question: "Gegeben sind die Gerade g: x=(0|0|1)+r(0|0|-1) und die Ebene E: z=0. Untersuchen Sie die Lagebeziehung.",
+      },
+      draft: "Die Gerade g schneidet die Ebene E.",
+    });
+
+    expect(result.ok).toBe(true);
+  });
+
+  it("rejects a wrong line-plane relation claim", () => {
+    const result = verifyLinePlaneRelationClaim({
+      task: {
+        question: "Gegeben sind die Gerade g: x=(0|0|1)+r(1|0|0) und die Ebene E: z=0. Untersuchen Sie die Lagebeziehung.",
+      },
+      draft: "Die Gerade g schneidet die Ebene E.",
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.issues[0].code).toBe("vector-line-plane-check-failed");
   });
 });

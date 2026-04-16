@@ -152,11 +152,19 @@
       const pointPlaneCheck = vectorApi.verifyPointOnPlaneClaim
         ? vectorApi.verifyPointOnPlaneClaim({ task, draft: text })
         : { ok: true, issues: [] };
+      const lineLineCheck = vectorApi.verifyLineLineRelationClaim
+        ? vectorApi.verifyLineLineRelationClaim({ task, draft: text })
+        : { ok: true, issues: [] };
+      const linePlaneCheck = vectorApi.verifyLinePlaneRelationClaim
+        ? vectorApi.verifyLinePlaneRelationClaim({ task, draft: text })
+        : { ok: true, issues: [] };
       issues.push(
         ...(parallelCheck.issues || []),
         ...(orthogonalityCheck.issues || []),
         ...(pointLineCheck.issues || []),
-        ...(pointPlaneCheck.issues || [])
+        ...(pointPlaneCheck.issues || []),
+        ...(lineLineCheck.issues || []),
+        ...(linePlaneCheck.issues || [])
       );
     }
 

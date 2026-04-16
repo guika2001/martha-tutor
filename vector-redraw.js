@@ -184,6 +184,130 @@
     return vectors;
   }
 
+  function cross(left, right) {
+    return [
+      left[1] * right[2] - left[2] * right[1],
+      left[2] * right[0] - left[0] * right[2],
+      left[0] * right[1] - left[1] * right[0],
+    ];
+  }
+
+  function dot(left, right) {
+    return left.reduce((sum, value, index) => sum + value * right[index], 0);
+  }
+
+  function almostZero(value, epsilon = 1e-6) {
+    return Math.abs(value) <= epsilon;
+  }
+
+  function parseCoefficient(raw, fallbackSign = 1) {
+    const cleaned = String(raw || "").replace(/\s+/g, "");
+    if (cleaned === "+" || cleaned === "") return fallbackSign;
+    if (cleaned === "-") return -1;
+    const numeric = Number(cleaned);
+    return Number.isFinite(numeric) ? numeric : fallbackSign;
+  }
+
+  function extractPlanes(text = "") {
+    const planes = [];
+    const normalized = normalize(text);
+    const generalRegex = /\b([A-Z])\s*:\s*([+-]?\d*)x\s*([+-]\s*\d*)y\s*([+-]\s*\d*)z\s*=\s*([+-]?\d+(?:\.\d+)?)/g;
+    let match;
+    while ((match = generalRegex.exec(normalized)) !== null) {
+      planes.push({
+        label: match[1],
+        kind: "plane",
+        normal: [
+          parseCoefficient(match[2]),
+          parseCoefficient(match[3]),
+          parseCoefficient(match[4]),
+        ],
+        constant: Number(match[5]),
+        raw: match[0],
+      });
+    }
+
+    const simpleAxisRegex = /\b([A-Z])\s*:\s*([xyz])\s*=\s*([+-]?\d+(?:\.\d+)?)/g;
+    while ((match = simpleAxisRegex.exec(normalized)) !== null) {
+      const axis = match[2].toLowerCase();
+      const constant = Number(match[3]);
+      const normal = axis === "x" ? [1, 0, 0] : axis === "y" ? [0, 1, 0] : [0, 0, 1];
+      planes.push({
+        label: match[1],
+        kind: "plane",
+        normal,
+        constant,
+        raw: match[0],
+      });
+    }
+
+    return planes;
+  }
+
+  function classifyLineLineRelation(left, right) {
+    if (!left || !right || !left.numericBaseCoordinates || !left.numericDirection || !right.numericBaseCoordinates || !right.numericDirection) {
+      return null;
+    }
+    const directionCross = cross(left.numericDirection, right.numericDirection);
+    if (directionCross.every((value) => almostZero(value))) {
+      return {
+        kind: "line-line",
+        labels: [left.label, right.label],
+        status: "parallel",
+      };
+    }
+    const baseDiff = right.numericBaseCoordinates.map((value, index) => value - left.numericBaseCoordinates[index]);
+    if (!almostZero(dot(baseDiff, directionCross))) {
+      return {
+        kind: "line-line",
+        labels: [left.label, right.label],
+        status: "skew",
+      };
+    }
+    return {
+      kind: "line-line",
+      labels: [left.label, right.label],
+      status: "intersecting",
+    };
+  }
+
+  function classifyLinePlaneRelation(line, plane) {
+    if (!line || !plane || !line.numericBaseCoordinates || !line.numericDirection || !Array.isArray(plane.normal)) return null;
+    const denominator = dot(plane.normal, line.numericDirection);
+    const offset = dot(plane.normal, line.numericBaseCoordinates) - plane.constant;
+    if (almostZero(denominator)) {
+      return {
+        kind: "line-plane",
+        lineLabel: line.label,
+        planeLabel: plane.label,
+        status: almostZero(offset) ? "contained" : "parallel",
+      };
+    }
+    return {
+      kind: "line-plane",
+      lineLabel: line.label,
+      planeLabel: plane.label,
+      status: "intersecting",
+    };
+  }
+
+  function buildGeometryRelations(lines = [], planes = []) {
+    const relations = [];
+    for (let i = 0; i < lines.length; i++) {
+      for (let j = i + 1; j < lines.length; j++) {
+        const relation = classifyLineLineRelation(lines[i], lines[j]);
+        if (relation) relations.push(relation);
+      }
+    }
+    lines.forEach((line) => {
+      planes.forEach((plane) => {
+        const relation = classifyLinePlaneRelation(line, plane);
+        if (relation) relations.push(relation);
+      });
+    });
+    return relations;
+  }
+
   function buildValidationHint(points, lines, vectors) {
     const hasPoints = points.length > 0;
     const hasRelation = lines.length > 0 || vectors.length > 0;
@@ -244,11 +368,13 @@
     const question = normalize(task.question || "");
     const points = extractPoints(question);
     const lines = [...extractLineEquations(question), ...extractPointPairLines(question, points)];
+    const planes = extractPlanes(question);
     const vectors = [
       ...extractExplicitVectors(question),
       ...deriveLineDirectionVectors(lines),
       ...deriveVectorsFromPoints(question, points),
     ];
+    const geometryRelations = buildGeometryRelations(lines, planes);
     const validationHint = buildValidationHint(points, lines, vectors);
 
     return {
@@ -259,7 +385,9 @@
       question: task.question || "",
       points,
       lines,
+      planes,
       vectors,
+      geometryRelations,
       validationHint,
     };
   }
@@ -272,9 +400,36 @@
   }
 
   function renderVectorRedraw(container, model = {}) {
-    if (!container || !model || !Array.isArray(model.points) || !model.points.length) return false;
-    const plottablePoints = model.points.filter((point) => Array.isArray(point.numericCoordinates));
-    if (!plottablePoints.length) return false;
+    if (!container || !model) return false;
+    const plottablePoints = Array.isArray(model.points)
+      ? model.points.filter((point) => Array.isArray(point.numericCoordinates))
+      : [];
+    const lineAnchors = Array.isArray(model.lines)
+      ? model.lines
+        .filter((line) => Array.isArray(line.numericBaseCoordinates) && Array.isArray(line.numericDirection))
+        .flatMap((line) => {
+          const base = line.numericBaseCoordinates;
+          const dir = line.numericDirection;
+          return [
+            { label: `${line.label}-0`, numericCoordinates: base },
+            { label: `${line.label}-1`, numericCoordinates: base.map((value, index) => value + dir[index]) },
+          ];
+        })
+      : [];
+    const planeAnchors = Array.isArray(model.planes)
+      ? model.planes.flatMap((plane) => {
+        if (!Array.isArray(plane.normal)) return [];
+        const [a, b, c] = plane.normal;
+        if (almostZero(c)) return [];
+        return [
+          { label: `${plane.label}-a`, numericCoordinates: [0, 0, plane.constant / c] },
+          { label: `${plane.label}-b`, numericCoordinates: [1, 0, (plane.constant - a) / c] },
+          { label: `${plane.label}-c`, numericCoordinates: [0, 1, (plane.constant - b) / c] },
+        ].filter((point) => point.numericCoordinates.every((value) => Number.isFinite(value)));
+      })
+      : [];
+    const allAnchors = [...plottablePoints, ...lineAnchors, ...planeAnchors];
+    if (!allAnchors.length) return false;
 
     container.innerHTML = "";
     const doc = container.ownerDocument;
@@ -290,7 +445,7 @@
     ctx.fillStyle = "#0f1117";
     ctx.fillRect(0, 0, width, height);
 
-    const maxCoord = Math.max(1, ...plottablePoints.flatMap((point) => point.numericCoordinates.map((value) => Math.abs(value))));
+    const maxCoord = Math.max(1, ...allAnchors.flatMap((point) => point.numericCoordinates.map((value) => Math.abs(value))));
     const scale = Math.min(42, 140 / maxCoord);
 
     ctx.strokeStyle = "#24293b";
@@ -302,18 +457,42 @@
     ctx.lineTo(width - 16, height / 2);
     ctx.stroke();
 
-    const pointLookup = new Map(plottablePoints.map((point) => [point.label, projectPoint(point, width, height, scale)]));
+    const pointLookup = new Map(allAnchors.map((point) => [point.label, projectPoint(point, width, height, scale)]));
+
+    ctx.fillStyle = "rgba(96,165,250,.12)";
+    (model.planes || []).forEach((plane) => {
+      const anchors = [`${plane.label}-a`, `${plane.label}-b`, `${plane.label}-c`]
+        .map((label) => pointLookup.get(label))
+        .filter(Boolean);
+      if (anchors.length < 3) return;
+      ctx.beginPath();
+      ctx.moveTo(anchors[0].x, anchors[0].y);
+      anchors.slice(1).forEach((point) => ctx.lineTo(point.x, point.y));
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = "#93c5fd";
+      ctx.font = "12px sans-serif";
+      ctx.fillText(plane.label, anchors[0].x + 6, anchors[0].y - 6);
+      ctx.fillStyle = "rgba(96,165,250,.12)";
+    });
+
     ctx.strokeStyle = "#60a5fa";
     ctx.lineWidth = 2;
     (model.lines || []).forEach((line) => {
-      if (!line.pointLabels || line.pointLabels.length < 2) return;
-      const from = pointLookup.get(line.pointLabels[0]);
-      const to = pointLookup.get(line.pointLabels[1]);
+      const from = line.pointLabels && line.pointLabels.length >= 2
+        ? pointLookup.get(line.pointLabels[0])
+        : pointLookup.get(`${line.label}-0`);
+      const to = line.pointLabels && line.pointLabels.length >= 2
+        ? pointLookup.get(line.pointLabels[1])
+        : pointLookup.get(`${line.label}-1`);
       if (!from || !to) return;
       ctx.beginPath();
       ctx.moveTo(from.x, from.y);
       ctx.lineTo(to.x, to.y);
       ctx.stroke();
+      ctx.fillStyle = "#93c5fd";
+      ctx.font = "12px sans-serif";
+      ctx.fillText(line.label, to.x + 6, to.y + 12);
     });
 
     ctx.fillStyle = "#34d399";
@@ -332,10 +511,14 @@
   const api = {
     buildVectorRedrawModel,
     buildValidationHint,
+    buildGeometryRelations,
+    classifyLineLineRelation,
+    classifyLinePlaneRelation,
     deriveVectorsFromPoints,
     extractExplicitVectors,
     deriveLineDirectionVectors,
     extractLineEquations,
+    extractPlanes,
     extractPointPairLines,
     extractPoints,
     renderVectorRedraw,
