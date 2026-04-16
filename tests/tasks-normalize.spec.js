@@ -39,6 +39,14 @@ describe("task navigator normalization", () => {
     expect(blockView.items[0].taskIndexes).toEqual([3, 4]);
   });
 
+  it("groups first-exam subtasks with trailing letters into one block", () => {
+    const index = buildTaskIndex(sampleTasks);
+    const blockView = getVisibleItems(index, { level: "GK", year: "ab-2026", topic: "Analysis" });
+
+    expect(blockView.items[0].taskIndexes).toEqual([0, 1]);
+    expect(blockView.items[1].taskIndexes).toEqual([2]);
+  });
+
   it("maps task indexes back to block ids", () => {
     const index = buildTaskIndex(sampleTasks);
     expect(findBlockIdByTaskIndex(index, 4)).toContain("Aufgabe a)");
@@ -50,11 +58,22 @@ describe("task navigator normalization", () => {
     const synthetic = buildCombinedTask(block);
     expect(synthetic.isSyntheticBlock).toBe(true);
     expect(synthetic.task_id).not.toContain("Aufgabe a)");
-    expect(synthetic.question).toContain("Teil 1");
+    expect(synthetic.question).toContain("a) (1)");
     expect(synthetic.examPart).toBe("2. Prüfungsteil");
     expect(synthetic.toolType).toBe("mit Hilfsmitteln");
     expect(synthetic.toolMode).toBe("supported");
     expect(synthetic.primaryOperator).toBe("begruenden");
+  });
+
+  it("keeps explicit subtask labels instead of synthetic Teil counters", () => {
+    const index = buildTaskIndex(sampleTasks);
+    const block = getVisibleItems(index, { level: "GK", year: "ab-2026", topic: "Analysis" }).items[0];
+    const synthetic = buildCombinedTask(block);
+
+    expect(synthetic.question).toContain("a)");
+    expect(synthetic.question).toContain("b)");
+    expect(synthetic.question).not.toContain("Teil 1");
+    expect(synthetic.question).not.toContain("Teil 2");
   });
 
   it("removes generic NRW lead-in boilerplate", () => {
@@ -86,6 +105,6 @@ describe("task navigator normalization", () => {
     const synthetic = buildCombinedTask(block);
 
     expect(block.taskIndexes).toHaveLength(1);
-    expect(synthetic.question.match(/Teil /g) || []).toHaveLength(1);
+    expect(synthetic.question).toBe("Ermitteln Sie die Lösungsmenge des linearen Gleichungssystems: 10x + 2y - 5z = 6, -2x + 3z = 8, 4x - 2y + 3z = 4.");
   });
 });

@@ -1930,6 +1930,50 @@ async function renderChat(i) {
   taskBubbleInner.appendChild(taskText);
   taskBubbleDiv.appendChild(taskBubbleInner);
 
+  let taskHost = el.querySelector('.task-context-host');
+  let messagesHost = el.querySelector('.chat-history-host');
+  if (!taskHost) {
+    taskHost = document.createElement('div');
+    taskHost.className = 'task-context-host';
+    el.appendChild(taskHost);
+  }
+  if (!messagesHost) {
+    messagesHost = document.createElement('div');
+    messagesHost.className = 'chat-history-host';
+    el.appendChild(messagesHost);
+  }
+
+  const taskRenderKey = [
+    state.selectedBlockId || t.task_id || i,
+    _currentLang,
+    questionSource,
+  ].join('::');
+
+  if (taskHost.dataset.renderKey !== taskRenderKey) {
+    taskHost.innerHTML = '';
+    taskHost.appendChild(taskBubbleDiv);
+    const noticeHost = document.createElement('div');
+    noticeHost.className = 'task-assist-stack';
+    const notices = buildTaskNoticeMessages(t);
+    if (notices.length) {
+      renderTaskNoticeMessages(noticeHost, notices);
+    }
+    if (window.MarthaUiHelpers && typeof window.MarthaUiHelpers.createFigurePanel === 'function') {
+      const figurePanel = window.MarthaUiHelpers.createFigurePanel(document, t);
+      if (figurePanel) {
+        noticeHost.appendChild(figurePanel);
+        setTimeout(() => window.MarthaUiHelpers.hydrateFigurePanel(figurePanel), 0);
+      }
+    }
+    if (noticeHost.childNodes.length) {
+      taskHost.appendChild(noticeHost);
+    }
+    taskHost.dataset.renderKey = taskRenderKey;
+    renderMath(taskBubbleInner);
+    setTimeout(() => renderMath(taskBubbleInner), 300);
+    setTimeout(() => renderMath(taskBubbleInner), 800);
+  }
+
   let html = '';
   if (!h.length) {
     html += '<div class="mg a"><div class="bu"><div class="sn">MARTHA</div>' + esc(getUI().greeting) + '</div></div>';
@@ -1942,29 +1986,8 @@ async function renderChat(i) {
     }
   });
 
-  el.innerHTML = html;
-  el.insertBefore(taskBubbleDiv, el.firstChild);
-  const noticeHost = document.createElement('div');
-  noticeHost.className = 'task-assist-stack';
-  const notices = buildTaskNoticeMessages(t);
-  if (notices.length) {
-    renderTaskNoticeMessages(noticeHost, notices);
-  }
-  if (window.MarthaUiHelpers && typeof window.MarthaUiHelpers.createFigurePanel === 'function') {
-    const figurePanel = window.MarthaUiHelpers.createFigurePanel(document, t);
-    if (figurePanel) {
-      noticeHost.appendChild(figurePanel);
-      setTimeout(() => window.MarthaUiHelpers.hydrateFigurePanel(figurePanel), 0);
-    }
-  }
-  if (noticeHost.childNodes.length) {
-    el.insertBefore(noticeHost, taskBubbleDiv.nextSibling);
-  }
+  messagesHost.innerHTML = html;
   el.scrollTop = el.scrollHeight;
-  // Render math — try immediately and retry after a short delay for KaTeX timing
-  renderMath(taskBubbleInner);
-  setTimeout(() => renderMath(taskBubbleInner), 300);
-  setTimeout(() => renderMath(taskBubbleInner), 800);
 
   h.forEach((m, idx) => {
     if (m.role !== 'assistant') return;

@@ -32,6 +32,15 @@
         pdfValidation: pdfValidation || null,
       };
     }
+    if (pdfValidation && pdfValidation.ok) {
+      return {
+        status: "preview-only",
+        engine: redrawResult.engine || "",
+        model: redrawResult.model || null,
+        reason: redrawResult.reason || "Unsicheres Redraw wird nicht angezeigt.",
+        pdfValidation: pdfValidation || null,
+      };
+    }
     return {
       status: "uncertain",
       engine: redrawResult.engine,

@@ -13,14 +13,14 @@ describe("figure redraw orchestration", () => {
     expect(result.model.type).toBe("analysis");
   });
 
-  it("downgrades to uncertain when the redraw is useful but not safe enough", () => {
+  it("falls back to preview-only when the pdf is valid but the redraw is not safe enough", () => {
     const result = buildFigureRedrawState({
       task: { topic: "Vektorielle Geometrie", figureRequired: true },
       pdfValidation: { ok: true, pageNumber: 1 },
       redrawResult: { engine: "vector", ok: false, reason: "Ambiguous geometry", model: { type: "vector" } },
     });
 
-    expect(result.status).toBe("uncertain");
+    expect(result.status).toBe("preview-only");
     expect(result.reason).toMatch(/Ambiguous geometry/);
   });
 

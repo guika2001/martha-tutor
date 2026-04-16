@@ -31,9 +31,16 @@
     return blocks.reduce((sum, block) => sum + (block.taskIndexes ? block.taskIndexes.length : 0), 0);
   }
 
+  function hasStructuredSubtaskId(task) {
+    const raw = cleanText(task && task.task_id, "");
+    return /\b(?:Pflicht|Wahlpflicht)aufgabe\s+\d+[a-z]\b$/i.test(raw)
+      || /\bAufgabe\s+[a-z]\)\s*(?:\(\d+\))?\s*$/i.test(raw);
+  }
+
   function deriveTaskBlockKey(task) {
     const raw = cleanText(task.task_id, "Aufgabe");
     let label = raw.replace(/\s*-\s.*$/, "").trim();
+    label = label.replace(/\b((?:Pflicht|Wahlpflicht)aufgabe\s+\d+)[a-z]\b$/i, "$1");
     label = label.replace(/\s*\((?:i|ii|iii|iv|v|\d+)\)\s*$/i, "").trim();
     label = label.replace(/\s+Teil\s+[a-z0-9]+$/i, "").trim();
     if (!label) label = raw;
@@ -138,11 +145,27 @@
 
   function formatTaskPartLabel(task, index) {
     const raw = cleanText(task.task_id, "");
+    const nestedLetter = raw.match(/\bAufgabe\s+([a-z])\)\s*\((\d+)\)\s*$/i);
+    if (nestedLetter) return nestedLetter[1].toLowerCase() + ") (" + nestedLetter[2] + ")";
+    const numberedLetter = raw.match(/\b(?:Pflicht|Wahlpflicht)aufgabe\s+\d+([a-z])\b$/i);
+    if (numberedLetter) return numberedLetter[1].toLowerCase() + ")";
+    const trailingLetterWithParen = raw.match(/([a-z])\)\s*(?:\((\d+)\))?\s*$/i);
+    if (trailingLetterWithParen) return trailingLetterWithParen[1].toLowerCase() + ")";
     const parenNumber = raw.match(/\((\d+)\)\s*$/);
-    if (parenNumber) return "Teil " + parenNumber[1];
+    if (parenNumber) return "(" + parenNumber[1] + ")";
     const trailingLetter = raw.match(/([a-z])\)?\s*$/i);
-    if (trailingLetter) return "Teil " + trailingLetter[1].toLowerCase();
+    if (trailingLetter && /\baufgabe\b/i.test(raw)) return trailingLetter[1].toLowerCase() + ")";
     return "Teil " + (index + 1);
+  }
+
+  function stripLeadingPartLabel(text, label) {
+    const normalized = normalizeWhitespace(text);
+    if (!normalized || !label) return normalized;
+    const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return normalized
+      .replace(new RegExp("^" + escaped + "\\s*[:.)-]?\\s*", "i"), "")
+      .replace(new RegExp("^Teil\\s+" + escaped + "\\s*[:.)-]?\\s*", "i"), "")
+      .trim();
   }
 
   function extractCommonLeadingLines(texts) {
@@ -166,12 +189,16 @@
 
   function buildCombinedText(tasks, field) {
     const rawTexts = tasks.map((task) => stripTaskLeadIn(task[field] || ""));
+    if (tasks.length <= 1) {
+      return (rawTexts[0] || "").trim();
+    }
     const withSharedLead = field === "question" ? extractCommonLeadingLines(rawTexts) : { common: "", rests: rawTexts };
     const parts = tasks
       .map((task, index) => {
-        const text = withSharedLead.rests[index] || rawTexts[index] || "";
+        const label = formatTaskPartLabel(task, index);
+        const text = stripLeadingPartLabel(withSharedLead.rests[index] || rawTexts[index] || "", label);
         if (!text) return "";
-        return formatTaskPartLabel(task, index) + "\n" + text;
+        return label + "\n" + text;
       })
       .filter(Boolean);
     return [withSharedLead.common, parts.join("\n\n")].filter(Boolean).join("\n\n");
@@ -192,6 +219,10 @@
       const contentKey = canonicalizeForGrouping(task.question || "");
       const variantScope = [level, year, topic, blockKey].join("::");
       if (!variantCounters.has(variantScope)) variantCounters.set(variantScope, []);
+      if (hasStructuredSubtaskId(task)) {
+        variantByTaskIndex.set(taskIndex, 0);
+        return;
+      }
       const known = variantCounters.get(variantScope);
       let variantIndex = known.findIndex((value) => value === contentKey);
       if (variantIndex === -1) {
