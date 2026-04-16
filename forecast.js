@@ -54,16 +54,21 @@
     return {
       id: "variant-" + (seed + 1),
       label,
+      level: blocks[0] ? blocks[0].level : "",
+      year: blocks[0] ? blocks[0].year : "",
       score: Number(score.toFixed(1)),
       rationale: `Gewichtet nach ${blocks[0] ? blocks[0].level : "GK/LK"}, offizieller NRW-Struktur und Themenhäufigkeit.`,
       blocks: blocks.map((block) => ({
         id: block.id,
         label: block.displayLabel || block.label,
+        level: block.level,
         topic: block.topic,
         year: block.year,
         examPart: block.examPart,
         taskType: block.taskType,
         toolType: block.toolType,
+        taskIndexes: Array.isArray(block.taskIndexes) ? block.taskIndexes.slice() : [],
+        representativeIndex: Number.isFinite(block.representativeIndex) ? block.representativeIndex : null,
       })),
     };
   }

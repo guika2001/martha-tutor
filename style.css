@@ -4,7 +4,7 @@
 html{font-family:var(--f);font-size:16px;background:var(--bg);color:var(--tx);-webkit-font-smoothing:antialiased;height:100%}
 body{height:100%;overflow:hidden;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
 .app{display:flex;height:100%}
-.pl{width:340px;min-width:340px;border-right:1px solid var(--bd);display:flex;flex-direction:column;background:var(--s1)}
+.pl{width:340px;min-width:340px;border-right:1px solid var(--bd);display:flex;flex-direction:column;background:var(--s1);height:100%;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
 .ph{padding:18px 16px 12px;border-bottom:1px solid var(--bd)}
 .ph h1{font-size:1.15rem;font-weight:700;background:linear-gradient(135deg,var(--ac),#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
 .ph .sub{font-size:.75rem;color:var(--tx2);margin-top:2px}
@@ -18,7 +18,7 @@ body{height:100%;overflow:hidden;padding:env(safe-area-inset-top) 0 env(safe-are
 .fb:disabled{opacity:.45;cursor:not-allowed}
 .nav-filter-label{display:flex;align-items:center;flex-shrink:0;font-size:.68rem;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;padding-right:2px}
 .nav-path{display:flex;align-items:center;min-width:0;max-width:100%;font-size:.75rem;color:var(--tx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ts{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.ts{flex:0 0 auto;overflow:visible;min-height:0}
 .ti{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--bd);cursor:pointer;transition:background .15s}
 .ti:active,.ti.sel{background:var(--s2)}.ti.sel{border-left:3px solid var(--ac)}
 .tic{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;flex-shrink:0}
@@ -112,7 +112,9 @@ body.simulation-mode .ch{position:sticky;top:0;z-index:5}
 .pdf-validation-badge.status-uncertain{background:rgba(251,191,36,.14);color:var(--amb);border:1px solid rgba(251,191,36,.24)}
 .pdf-validation-badge.status-preview-only,.pdf-validation-badge.status-unavailable{background:rgba(124,130,160,.18);color:var(--tx2);border:1px solid rgba(124,130,160,.24)}
 .forecast-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
-.forecast-card{background:var(--s2);border:1px solid var(--bd);border-radius:14px;padding:14px}
+.forecast-levels{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.forecast-card{appearance:none;background:var(--s2);border:1px solid var(--bd);border-radius:14px;padding:14px;text-align:left;color:inherit;cursor:pointer}
+.forecast-card.active{border-color:var(--ac);box-shadow:0 0 0 1px rgba(124,108,255,.25)}
 .forecast-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px}
 .forecast-title{font-size:.88rem;font-weight:700;color:var(--tx)}
 .forecast-rationale{font-size:.76rem;line-height:1.5;color:var(--tx2);margin-top:4px}
@@ -121,6 +123,15 @@ body.simulation-mode .ch{position:sticky;top:0;z-index:5}
 .forecast-list li{color:var(--tx2);font-size:.78rem;line-height:1.45}
 .forecast-list li strong{display:block;color:var(--tx);font-size:.82rem}
 .forecast-list li span{display:block;margin-top:2px}
+.forecast-detail{margin-top:16px;padding:14px;border-radius:14px;border:1px solid var(--bd);background:var(--s2)}
+.forecast-detail-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}
+.forecast-detail-list{display:flex;flex-direction:column;gap:10px}
+.forecast-block-btn{appearance:none;display:flex;align-items:flex-start;gap:10px;width:100%;padding:12px 14px;border-radius:12px;border:1px solid var(--bd);background:var(--s1);color:var(--tx);text-align:left;cursor:pointer}
+.forecast-block-btn:hover{border-color:var(--ac)}
+.forecast-block-index{font-weight:700;color:var(--tx2);min-width:22px}
+.forecast-block-copy{display:flex;flex-direction:column;gap:3px}
+.forecast-block-copy strong{font-size:.84rem;color:var(--tx)}
+.forecast-block-copy span{font-size:.76rem;color:var(--tx2);line-height:1.45}
 /* ── MODAL ── */
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);z-index:100;display:flex;align-items:center;justify-content:center;padding:20px;animation:mfade .2s ease-out}
 @keyframes mfade{from{opacity:0}to{opacity:1}}

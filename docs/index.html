@@ -221,9 +221,12 @@
       <div class="gen-box" style="margin-bottom:14px">
         Die Varianten priorisieren wahrscheinliche NRW-Muster. Sie sind eine lernorientierte Prognose, keine echte Vorhersage der Prüfung.
       </div>
+      <div id="forecastLevelControls" class="forecast-levels"></div>
       <div id="forecastContent" class="forecast-grid"></div>
+      <div id="forecastDetail" class="forecast-detail"></div>
     </div>
     <div class="mf">
+      <button class="btn-pri" id="forecastLoadBtn" onclick="window._loadSelectedForecastVariant()" disabled>Variante laden</button>
       <button class="btn-sec" onclick="window._closeForecastModal()">Schließen</button>
     </div>
   </div>
@@ -530,6 +533,9 @@ const state = {
   selectedTaskRef: null,
   activeSimulation: null,
   simulationTimerId: null,
+  forecastLevel: "",
+  selectedForecastVariantId: "",
+  loadedForecastVariant: null,
 };
 
 const appStorage = window.MarthaStorage ? window.MarthaStorage.createStorage("martha4") : null;
@@ -546,6 +552,21 @@ function refreshTaskIndex() {
   if (window.MarthaTaskNav) {
     state.taskIndex = window.MarthaTaskNav.buildTaskIndex(state.tasks);
   }
+}
+
+function getAllBlocks() {
+  return state.taskIndex
+    ? state.taskIndex.levels.flatMap((level) => level.topics).flatMap((topic) => topic.blocks)
+    : [];
+}
+
+function getBlockById(blockId) {
+  return getAllBlocks().find((entry) => entry.id === blockId) || null;
+}
+
+function clearForecastState() {
+  state.loadedForecastVariant = null;
+  state.selectedForecastVariantId = "";
 }
 
 function cleanTaskText(text) {
@@ -816,17 +837,43 @@ function closeSimulationModal() {
 
 function renderForecastContent() {
   const container = document.getElementById("forecastContent");
-  if (!container || !window.MarthaForecast || !state.taskIndex) return;
-  const preferredLevel = state.levelFilter === "all" ? "GK" : state.levelFilter;
+  const detail = document.getElementById("forecastDetail");
+  const levelControls = document.getElementById("forecastLevelControls");
+  const loadBtn = document.getElementById("forecastLoadBtn");
+  if (!container || !detail || !levelControls || !loadBtn || !window.MarthaForecast || !state.taskIndex) return;
+  const preferredLevel = state.forecastLevel || (state.levelFilter === "all" ? "GK" : state.levelFilter);
   const preferredYear = state.currentYear || "ab-2026";
   const variants = window.MarthaForecast.buildForecastVariants(state.taskIndex, {
     level: preferredLevel,
     year: preferredYear,
   });
+  if (!variants.length) {
+    container.innerHTML = "";
+    detail.innerHTML = '<div class="gen-box">Für diese Auswahl konnte Martha keine sinnvolle Probeklausurvariante aufbauen.</div>';
+    loadBtn.disabled = true;
+    return;
+  }
+  if (!variants.some((variant) => variant.id === state.selectedForecastVariantId)) {
+    state.selectedForecastVariantId = variants[0].id;
+  }
+  const activeVariant = variants.find((variant) => variant.id === state.selectedForecastVariantId) || variants[0];
+  levelControls.innerHTML = "";
+  ["GK", "LK"].forEach((level) => {
+    const button = document.createElement("button");
+    button.className = "fb" + (preferredLevel === level ? " on" : "");
+    button.textContent = level;
+    button.onclick = () => {
+      state.forecastLevel = level;
+      state.selectedForecastVariantId = "";
+      renderForecastContent();
+    };
+    levelControls.appendChild(button);
+  });
   container.innerHTML = "";
   variants.forEach((variant) => {
-    const card = document.createElement("section");
-    card.className = "forecast-card";
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "forecast-card" + (variant.id === activeVariant.id ? " active" : "");
     const items = variant.blocks.map((block) => (
       `<li><strong>${esc(block.label)}</strong><span>${esc(block.topic)} · ${esc(block.examPart)} · ${esc(block.taskType)}</span></li>`
     )).join("");
@@ -840,17 +887,86 @@ function renderForecastContent() {
       </div>
       <ol class="forecast-list">${items}</ol>
     `;
+    card.onclick = () => {
+      state.selectedForecastVariantId = variant.id;
+      renderForecastContent();
+    };
     container.appendChild(card);
   });
+  detail.innerHTML = `
+    <div class="forecast-detail-head">
+      <div>
+        <div class="forecast-title">${esc(activeVariant.label)}</div>
+        <div class="forecast-rationale">${esc(activeVariant.rationale)}</div>
+      </div>
+      <div class="forecast-score">${esc(String(activeVariant.score))}</div>
+    </div>
+    <div class="forecast-detail-list">
+      ${activeVariant.blocks.map((block, index) => `
+        <button type="button" class="forecast-block-btn" data-block-id="${esc(block.id)}">
+          <span class="forecast-block-index">${index + 1}.</span>
+          <span class="forecast-block-copy">
+            <strong>${esc(block.label)}</strong>
+            <span>${esc(block.topic)} · ${esc(block.examPart)} · ${esc(block.taskType)}</span>
+          </span>
+        </button>
+      `).join("")}
+    </div>
+  `;
+  detail.querySelectorAll(".forecast-block-btn").forEach((button) => {
+    button.onclick = () => window._openForecastBlock(button.dataset.blockId);
+  });
+  loadBtn.disabled = false;
+  loadBtn.dataset.variantId = activeVariant.id;
 }
 
 function openForecastModal() {
+  state.forecastLevel = state.levelFilter === "all" ? "GK" : state.levelFilter;
+  state.selectedForecastVariantId = "";
   renderForecastContent();
   document.getElementById("forecastModal").style.display = "flex";
 }
 
 function closeForecastModal() {
   document.getElementById("forecastModal").style.display = "none";
+}
+
+function loadForecastVariantById(variantId, focusBlockId = "") {
+  if (!window.MarthaForecast || !state.taskIndex) return;
+  const level = state.forecastLevel || (state.levelFilter === "all" ? "GK" : state.levelFilter);
+  const year = state.currentYear || "ab-2026";
+  const variants = window.MarthaForecast.buildForecastVariants(state.taskIndex, { level, year });
+  const variant = variants.find((entry) => entry.id === variantId);
+  if (!variant) return;
+  state.levelFilter = variant.level || level;
+  state.currentTopic = "";
+  state.currentExamPart = "";
+  state.currentTaskType = "";
+  state.currentToolType = "";
+  state.selectedBlockId = "";
+  state.selectedTaskRef = null;
+  state.loadedForecastVariant = {
+    id: variant.id,
+    label: variant.label,
+    level: variant.level,
+    year: variant.year,
+    blocks: variant.blocks.map((block) => ({
+      id: block.id,
+      representativeIndex: block.representativeIndex,
+    })),
+  };
+  applyFilters();
+  const firstBlockId = focusBlockId || (state.loadedForecastVariant.blocks[0] && state.loadedForecastVariant.blocks[0].id);
+  if (firstBlockId) {
+    window._selectBlock(firstBlockId);
+  }
+  closeForecastModal();
+}
+
+function openForecastBlock(blockId) {
+  const variantId = state.selectedForecastVariantId || (document.getElementById("forecastLoadBtn") || {}).dataset.variantId;
+  if (!variantId || !blockId) return;
+  loadForecastVariantById(variantId, blockId);
 }
 
 function startSimulation() {
@@ -1504,6 +1620,22 @@ function injectAndSelect(task) {
 function renderFilters() {
   const el = document.getElementById("ff");
   const path = [];
+  if (state.loadedForecastVariant) {
+    el.innerHTML = "";
+    const topRow = document.createElement("div");
+    topRow.className = "fr nav-stack-top";
+    const back = document.createElement("button");
+    back.className = "fb";
+    back.textContent = "← Prognose verlassen";
+    back.onclick = () => window._navBack();
+    topRow.appendChild(back);
+    const label = document.createElement("div");
+    label.className = "nav-path";
+    label.textContent = [state.loadedForecastVariant.level, "Probeklausur", state.loadedForecastVariant.label].filter(Boolean).join(" · ");
+    topRow.appendChild(label);
+    el.appendChild(topRow);
+    return;
+  }
   if (state.levelFilter !== "all") path.push(state.levelFilter);
   if (state.currentTopic) path.push(state.currentTopic);
   const filters = state.filtered && state.filtered.filters ? state.filtered.filters : {};
@@ -1554,7 +1686,7 @@ function applyFilters() {
     renderTaskList();
     return;
   }
-  state.filtered = window.MarthaTaskNav.getVisibleItems(state.taskIndex, {
+  const baseView = window.MarthaTaskNav.getVisibleItems(state.taskIndex, {
     level: state.levelFilter === "all" ? "" : state.levelFilter,
     topic: state.currentTopic,
     year: state.currentYear,
@@ -1562,6 +1694,20 @@ function applyFilters() {
     taskType: state.currentTaskType,
     toolType: state.currentToolType,
   });
+  if (state.loadedForecastVariant) {
+    const items = state.loadedForecastVariant.blocks
+      .map((entry) => getBlockById(entry.id))
+      .filter(Boolean);
+    state.filtered = {
+      kind: "block",
+      title: state.loadedForecastVariant.label,
+      items,
+      filters: {},
+      forecast: true,
+    };
+  } else {
+    state.filtered = baseView;
+  }
   renderFilters();
   renderTaskList();
   if (state.activeSimulation) syncSimulationTaskSelection();
@@ -1633,6 +1779,7 @@ window._sT = (topic, btn) => {
   applyFilters();
 };
 window._sL = (level, btn) => {
+  clearForecastState();
   state.levelFilter = level;
   state.currentYear = "";
   state.currentTopic = "";
@@ -1650,27 +1797,26 @@ window._sL = (level, btn) => {
   applyFilters();
 };
 window._setYearFilter = (year) => {
+  clearForecastState();
   state.currentYear = year;
   state.selectedBlockId = "";
   state.selectedTaskRef = null;
   applyFilters();
 };
-window._setExamPartFilter = (value) => { state.currentExamPart = value; state.selectedBlockId = ""; state.selectedTaskRef = null; applyFilters(); };
-window._setTaskTypeFilter = (value) => { state.currentTaskType = value; state.selectedBlockId = ""; state.selectedTaskRef = null; applyFilters(); };
-window._setToolTypeFilter = (value) => { state.currentToolType = value; state.selectedBlockId = ""; state.selectedTaskRef = null; applyFilters(); };
-window._navTopic = (topic) => { state.currentTopic = topic; state.selectedBlockId = ""; state.selectedTaskRef = null; applyFilters(); };
+window._setExamPartFilter = (value) => { clearForecastState(); state.currentExamPart = value; state.selectedBlockId = ""; state.selectedTaskRef = null; applyFilters(); };
+window._setTaskTypeFilter = (value) => { clearForecastState(); state.currentTaskType = value; state.selectedBlockId = ""; state.selectedTaskRef = null; applyFilters(); };
+window._setToolTypeFilter = (value) => { clearForecastState(); state.currentToolType = value; state.selectedBlockId = ""; state.selectedTaskRef = null; applyFilters(); };
+window._navTopic = (topic) => { clearForecastState(); state.currentTopic = topic; state.selectedBlockId = ""; state.selectedTaskRef = null; applyFilters(); };
 window._navBack = () => {
-  if (state.currentTopic) state.currentTopic = "";
+  if (state.loadedForecastVariant) clearForecastState();
+  else if (state.currentTopic) state.currentTopic = "";
   else if (state.levelFilter !== "all") state.levelFilter = "all";
   state.selectedBlockId = "";
   state.selectedTaskRef = null;
   applyFilters();
 };
 window._selectBlock = (blockId) => {
-  const block = state.taskIndex.levels
-    .flatMap((level) => level.topics)
-    .flatMap((topic) => topic.blocks)
-    .find((entry) => entry.id === blockId);
+  const block = getBlockById(blockId);
   if (!block) return;
   state.selectedBlockId = blockId;
   state.selectedTaskRef = window.MarthaTaskNav && window.MarthaTaskNav.buildCombinedTask
@@ -1936,6 +2082,12 @@ window._openSimulationModal = openSimulationModal;
 window._closeSimulationModal = closeSimulationModal;
 window._openForecastModal = openForecastModal;
 window._closeForecastModal = closeForecastModal;
+window._loadSelectedForecastVariant = () => {
+  const btn = document.getElementById("forecastLoadBtn");
+  if (!btn || !btn.dataset.variantId) return;
+  loadForecastVariantById(btn.dataset.variantId);
+};
+window._openForecastBlock = openForecastBlock;
 window._startSimulation = startSimulation;
 window._finishSimulation = finishSimulation;
 window._recordTaskOutcome = recordTaskOutcome;
