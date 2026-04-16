@@ -91,6 +91,7 @@
     <div class="sim-launch">
       <button class="btn-sec sim-launch-btn" id="startSimulationBtn" onclick="window._openSimulationModal()">🧪 Prüfungssimulation</button>
       <button class="btn-sec sim-launch-btn" id="openForecastBtn" onclick="window._openForecastModal()" style="margin-top:8px">📊 Prüfungsprognose</button>
+      <button class="btn-sec sim-launch-btn" id="openHelpBtn" onclick="window._openHelpManual()" style="margin-top:8px">❓ Súgó</button>
     </div>
     <div class="auth-inline" id="authBar" style="display:none">
       <div class="auth-inline-copy">
@@ -145,6 +146,7 @@
       <div class="ed" id="welcome-sub">Wähle links eine Aufgabe — ich erkläre dir Schritt für Schritt.</div>
       <button class="btn-pri" id="welcomeSimulationBtn" style="margin-top:18px" onclick="window._openSimulationModal()">🧪 Prüfungssimulation starten</button>
       <button class="btn-sec" id="welcomeForecastBtn" style="margin-top:10px" onclick="window._openForecastModal()">📊 Wahrscheinliche Probeklausuren</button>
+      <button class="btn-sec" id="welcomeHelpBtn" style="margin-top:10px" onclick="window._openHelpManual()">❓ Felhasználói kézikönyv</button>
     </div>
 
     <div class="qa" id="qa" style="display:none">
@@ -351,6 +353,7 @@ const LANGUAGES = {
       all_failed: " Versuche ohne Erfolg.", all_failed_hint: "Versuche eine andere Aufgabe oder \u00e4ndere den Schwierigkeitsgrad.",
       simulation: "🧪 Prüfungssimulation", simulation_start: "🧪 Prüfungssimulation starten",
       forecast: "📊 Prüfungsprognose", forecast_open: "📊 Wahrscheinliche Probeklausuren",
+      help: "❓ Hilfe", help_open: "❓ Benutzerhandbuch",
       operator_demand: "🧭 Was verlangt der Operator?", operator_full: "📝 Volle-BE Antwort",
       understood: "✔ Verstanden", unsure: "✖ Unsicher", repeat_next: "🗂 Nächste Wiederholung",
       uploaded_with_martha: "📚 Mit Martha öffnen", open_with_martha: "📚 Mit Martha öffnen",
@@ -390,6 +393,7 @@ Aufgabe auf Deutsch.`,
       all_failed: " próbálkozás sikertelen.", all_failed_hint: "Próbálj másik feladatot, vagy változtass a nehézségen.",
       simulation: "🧪 Érettségi szimuláció", simulation_start: "🧪 Érettségi szimuláció indítása",
       forecast: "📊 Érettségi prognózis", forecast_open: "📊 Valószínű próbaérettségik",
+      help: "❓ Súgó", help_open: "❓ Felhasználói kézikönyv",
       operator_demand: "🧭 Mit kér az operátor?", operator_full: "📝 Teljes pontos válasz",
       understood: "✔ Értem", unsure: "✖ Bizonytalan", repeat_next: "🗂 Következő ismétlés",
       uploaded_with_martha: "📚 Betöltés Marthába", open_with_martha: "📚 Megnyitás Marthával",
@@ -429,6 +433,7 @@ A feladatot magyarul fogalmazd meg.`,
       all_failed: " attempts failed.", all_failed_hint: "Try a different task or change the difficulty level.",
       simulation: "🧪 Exam simulation", simulation_start: "🧪 Start exam simulation",
       forecast: "📊 Exam forecast", forecast_open: "📊 Likely mock exams",
+      help: "❓ Help", help_open: "❓ User manual",
       operator_demand: "🧭 What does the operator require?", operator_full: "📝 Full-credit answer",
       understood: "✔ Understood", unsure: "✖ Unsure", repeat_next: "🗂 Next review",
       uploaded_with_martha: "📚 Open with Martha", open_with_martha: "📚 Open with Martha",
@@ -466,6 +471,7 @@ Write the task in English.`,
       greeting: "¡Hola! \ud83d\udc4b Soy Martha, tu profesora de matemáticas.\n\nMira el ejercicio de arriba. ¿Cómo quieres empezar?\nPuedes decirme lo que ya sabes o pedir una \ud83d\udca1 pista.",
       verified: "\u2713 Verificado matemáticamente", math_error: "Error matemático, reintentando...",
       all_failed: " intentos fallidos.", all_failed_hint: "Prueba con otro ejercicio o cambia el nivel de dificultad.",
+      help: "❓ Ayuda", help_open: "❓ Manual del usuario",
     },
     system: `Eres Martha, una profesora de matemáticas experimentada para el Abitur de NRW.
 MÉTODO: Enseñanza socrática. Primero pregunta qué intentó. NUNCA des la solución inmediatamente.
@@ -519,8 +525,10 @@ function applyUILanguage() {
   set("upload-modal-title", ui.upload_modal_title);
   set("startSimulationBtn", ui.simulation || "🧪 Prüfungssimulation");
   set("openForecastBtn", ui.forecast || "📊 Prüfungsprognose");
+  set("openHelpBtn", ui.help || "❓ Hilfe");
   set("welcomeSimulationBtn", ui.simulation_start || "🧪 Prüfungssimulation starten");
   set("welcomeForecastBtn", ui.forecast_open || "📊 Wahrscheinliche Probeklausuren");
+  set("welcomeHelpBtn", ui.help_open || "❓ Benutzerhandbuch");
   set("authInlineLabel", ui.logged_in || "Angemeldet");
   set("authLogoutBtn", ui.logout || "Logout");
   set("diagTitle", ui.diagnose || "Diagnose");
@@ -546,6 +554,12 @@ function applyUILanguage() {
 }
 
 window._setLang = setLanguage;
+
+function openHelpManual() {
+  window.open("martha-4.0-user-manual-hu.html", "_blank", "noopener");
+}
+
+window._openHelpManual = openHelpManual;
 
 
 // ══ state.js ══

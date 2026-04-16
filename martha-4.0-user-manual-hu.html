@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Martha 4.0 Felhasználói Kézikönyv</title>
+  <style>
+    :root {
+      --ink: #18222e;
+      --muted: #4c5a68;
+      --line: #d8e0e8;
+      --panel: #f5f8fb;
+      --accent: #1769aa;
+      --accent-soft: #e7f1fb;
+      --good: #1f7a4d;
+      --warn: #8a5d00;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Helvetica Neue", Arial, sans-serif;
+      color: var(--ink);
+      background: #eef3f7;
+      line-height: 1.55;
+    }
+
+    .page {
+      width: 210mm;
+      min-height: 297mm;
+      margin: 0 auto;
+      background: #fff;
+      padding: 18mm 18mm 20mm;
+    }
+
+    h1, h2, h3 {
+      margin: 0 0 10px;
+      line-height: 1.15;
+    }
+
+    h1 {
+      font-size: 28px;
+      letter-spacing: -0.02em;
+    }
+
+    h2 {
+      margin-top: 26px;
+      font-size: 20px;
+      color: var(--accent);
+    }
+
+    h3 {
+      margin-top: 18px;
+      font-size: 15px;
+    }
+
+    p {
+      margin: 0 0 10px;
+      font-size: 12px;
+    }
+
+    ul, ol {
+      margin: 8px 0 12px 18px;
+      padding: 0;
+      font-size: 12px;
+    }
+
+    li { margin-bottom: 5px; }
+
+    .hero {
+      padding: 18px 20px;
+      background: linear-gradient(135deg, #eff7ff, #f8fbff 55%, #eef3ff);
+      border: 1px solid #d8e6f4;
+      border-radius: 16px;
+      margin-bottom: 22px;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 13px;
+      max-width: 640px;
+    }
+
+    .meta {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+
+    .pill {
+      display: inline-block;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #fff;
+      border: 1px solid #d4dfeb;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .box {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin: 12px 0;
+    }
+
+    .box strong {
+      color: var(--ink);
+    }
+
+    .note {
+      background: #fff8e8;
+      border-left: 4px solid #e6ad2f;
+      padding: 10px 12px;
+      margin: 12px 0;
+      font-size: 11.5px;
+    }
+
+    .ok {
+      background: #edf8f2;
+      border-left: 4px solid #46a36d;
+      padding: 10px 12px;
+      margin: 12px 0;
+      font-size: 11.5px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin: 10px 0 14px;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px;
+      background: #fff;
+    }
+
+    .card h3 {
+      margin-top: 0;
+    }
+
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11.5px;
+      margin: 10px 0 14px;
+    }
+
+    .table th,
+    .table td {
+      border: 1px solid var(--line);
+      padding: 8px 9px;
+      vertical-align: top;
+      text-align: left;
+    }
+
+    .table th {
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .footer {
+      margin-top: 26px;
+      padding-top: 10px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 10.5px;
+    }
+
+    .small {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .step {
+      display: inline-block;
+      min-width: 20px;
+      height: 20px;
+      border-radius: 999px;
+      background: var(--accent);
+      color: #fff;
+      text-align: center;
+      font-size: 11px;
+      line-height: 20px;
+      margin-right: 7px;
+      vertical-align: middle;
+    }
+
+    .break {
+      page-break-before: always;
+    }
+
+    @page {
+      size: A4;
+      margin: 12mm;
+    }
+
+    @media print {
+      body {
+        background: #fff;
+      }
+
+      .page {
+        margin: 0;
+        width: auto;
+        min-height: auto;
+        padding: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>Martha 4.0 felhasználói kézikönyv</h1>
+      <p class="subtitle">
+        Magyar nyelvű, diákoknak szóló használati útmutató a Martha 4.0 alkalmazáshoz.
+        Ez a kézikönyv a jelenlegi 4.0 felület és működés alapján készült.
+      </p>
+      <div class="meta">
+        <span class="pill">Célcsoport: diákok</span>
+        <span class="pill">Nyelv: magyar</span>
+        <span class="pill">Téma: NRW matek érettségi felkészítés</span>
+      </div>
+    </section>
+
+    <h2>1. Mi a Martha 4.0?</h2>
+    <p>
+      A Martha 4.0 egy matematikai tanulóalkalmazás, amely elsősorban az NRW matematika
+      érettségire való felkészülést támogatja. Az appban feladatokat lehet kiválasztani,
+      azokhoz lépésről lépésre segítséget kérni, vizsgaszimulációt indítani, valamint
+      nyomon követni, mely témák mennek jól és melyeket kell még ismételni.
+    </p>
+    <div class="box">
+      <strong>Mire használható?</strong>
+      <ul>
+        <li>feladat kiválasztása témakör, szint vagy vizsgalogika alapján,</li>
+        <li>magyarázat, tipp, első lépés vagy teljes megoldási út kérése,</li>
+        <li>vizsgaszerű gyakorlás időkorláttal,</li>
+        <li>saját teljesítmény követése,</li>
+        <li>ismétlés és célzott gyakorlás gyenge pontok alapján,</li>
+        <li>saját feladat feltöltése képből, PDF-ből vagy Word-fájlból.</li>
+      </ul>
+    </div>
+
+    <h2>2. Belépés és indulás</h2>
+    <p>
+      A Martha 4.0 használatához Google-bejelentkezés szükséges. Az induló képernyőn
+      először nyelvet választhatsz, majd a <strong>Google Sign-In</strong> gombbal tudsz belépni.
+    </p>
+    <div class="grid">
+      <div class="card">
+        <h3>Nyelvválasztás</h3>
+        <p>
+          Az alkalmazásban több nyelv közül lehet választani. A kezdőképernyőn és a fő
+          felületen is elérhető a nyelvváltás. A magyar nyelvet a <strong>HU</strong> jelölésű
+          gomb aktiválja.
+        </p>
+      </div>
+      <div class="card">
+        <h3>Bejelentkezés</h3>
+        <p>
+          A feladatok, a chat és az egyéni tanulási adatok csak bejelentkezés után érhetők el.
+          Sikeres belépés után az alkalmazás megjeleníti a bejelentkezett e-mail-címet is.
+        </p>
+      </div>
+    </div>
+    <div class="note">
+      Ha a bejelentkezés nem működik, lehet, hogy a háttérrendszer konfigurációja hiányzik.
+      Ilyenkor a rendszer külön üzenetet jelenít meg a belépési panelen.
+    </div>
+
+    <h2>3. A főképernyő felépítése</h2>
+    <p>
+      A képernyő két fő részből áll: bal oldalon a navigáció és az összegző kártyák, jobb
+      oldalon pedig a feladatnézet és a chat.
+    </p>
+
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Felületrész</th>
+          <th>Funkció</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Bal oldali sáv</td>
+          <td>Nyelvváltás, kapcsolatállapot, vizsgaszimuláció indítása, diagnózis, tanulási terv, hibaprofil, ismétlés és feladatlista.</td>
+        </tr>
+        <tr>
+          <td>Feladatszűrők</td>
+          <td>Hierarchikusan működnek: először szint, utána téma, azon belül feladatblokk vagy változat választható.</td>
+        </tr>
+        <tr>
+          <td>Jobb oldali főpanel</td>
+          <td>Itt jelenik meg a kiválasztott feladat, a chat, a gyorsgombok és az üzenetírási mező.</td>
+        </tr>
+        <tr>
+          <td>Chat gyorsgombok</td>
+          <td>Egy kattintással kérhetsz tippet, első lépést, megoldási útvonalat vagy teljes megoldást.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>4. Feladat kiválasztása</h2>
+    <p>
+      A bal oldali lista nem egyszerű lapozó, hanem többszintű navigáció. Először általában a
+      <strong>GK</strong> vagy <strong>LK</strong> szintet választod ki, utána témát, majd az adott
+      blokk vagy változat feladatát nyitod meg. A kiválasztás után a jobb oldalon megnyílik a
+      feladathoz tartozó chat és a gyorsgombok sora.
+    </p>
+    <div class="box">
+      <strong>Ajánlott sorrend:</strong>
+      <ol>
+        <li>válassz témát vagy szintet,</li>
+        <li>nyisd meg a kívánt feladatot,</li>
+        <li>először próbáld meg önállóan értelmezni a kérdést,</li>
+        <li>csak ezután használj tippet vagy első lépést.</li>
+      </ol>
+    </div>
+
+    <h2>5. A chat használata</h2>
+    <p>
+      A Martha 4.0 jobb oldali paneljén a kiválasztott feladathoz tartozó chat működik.
+      Ide saját kérdést is beírhatsz, vagy használhatod az előre elkészített segítségkérő gombokat.
+    </p>
+    <div class="note">
+      Nem minden gyorsgomb látszik minden feladatnál. Az operátoros gombok csak akkor jelennek meg,
+      ha a rendszer talált felismerhető műveleti szót, a rajzolás gomb pedig akkor, ha a feladatból
+      függvényt tud kinyerni.
+    </div>
+
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Gomb</th>
+          <th>Mit csinál?</th>
+          <th>Mikor érdemes használni?</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>💡 Tipp</td>
+          <td>Rövid iránymutatást ad anélkül, hogy rögtön megoldaná a feladatot.</td>
+          <td>Ha elakadtál, de még önállóan szeretnél dolgozni.</td>
+        </tr>
+        <tr>
+          <td>👣 Első lépés</td>
+          <td>Megadja a következő konkrét induló lépést.</td>
+          <td>Ha már érted a feladatot, de nem tudod, hogyan kezdd el.</td>
+        </tr>
+        <tr>
+          <td>🧠 Lösungsweg</td>
+          <td>Megmutatja a teljes megoldási út logikáját.</td>
+          <td>Ha a gondolatmenetet szeretnéd átlátni.</td>
+        </tr>
+        <tr>
+          <td>✅ Lösung</td>
+          <td>Teljes megoldást kér a rendszertől.</td>
+          <td>Önellenőrzéshez vagy utólagos ellenőrzéshez.</td>
+        </tr>
+        <tr>
+          <td>🧭 Was verlangt der Operator?</td>
+          <td>Elmagyarázza, hogy a feladatban szereplő műveleti szó pontosan mit vár el.</td>
+          <td>Ha nem világos, mit jelent például a „begründen”, „berechnen” vagy „beurteilen”.</td>
+        </tr>
+        <tr>
+          <td>📝 Volle-BE Antwort</td>
+          <td>Segít megérteni, hogyan nézne ki egy teljes pontot érő válasz szerkezete.</td>
+          <td>Ha nemcsak számolni, hanem jól megfogalmazni is szeretnél.</td>
+        </tr>
+        <tr>
+          <td>📈 Funktion zeichnen</td>
+          <td>Megpróbálja kirajzolni a feladatban szereplő függvényt.</td>
+          <td>Ha grafikon alapján könnyebb gondolkodnod.</td>
+        </tr>
+        <tr>
+          <td>🔁 Üben</td>
+          <td>Hasonló gyakorlófeladatot generál.</td>
+          <td>Ha ugyanabból a típusból még egy példát szeretnél.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="ok">
+      Jó tanulási stratégia: <strong>Tipp → Első lépés → saját próbálkozás → csak ezután teljes megoldás.</strong>
+      Így a Martha nem helyetted dolgozik, hanem ténylegesen segít fejlődni.
+    </div>
+
+    <div class="break"></div>
+
+    <h2>6. Saját üzenet írása</h2>
+    <p>
+      A szövegmezőbe saját kérdést is beírhatsz. Például:
+    </p>
+    <ul>
+      <li>„Miért ezt a képletet használjuk?”</li>
+      <li>„Ezt a lépést magyarázd el részletesebben.”</li>
+      <li>„Csak ellenőrizd a gondolatmenetemet, ne oldd meg helyettem.”</li>
+      <li>„Mondd meg, hol hibáztam a deriválásban.”</li>
+    </ul>
+    <p>
+      Enterrel gyorsan elküldheted az üzenetet. Ha több sort szeretnél írni, ügyelj arra,
+      hogy ne küldd el túl korán.
+    </p>
+
+    <h2>7. Vizsgaszimuláció</h2>
+    <p>
+      A <strong>Prüfungssimulation</strong> mód arra való, hogy a feladatmegoldást vizsgaszerűbben,
+      időre és fókuszáltabban gyakorold.
+    </p>
+
+    <h3>Indítás</h3>
+    <ol>
+      <li><span class="step">1</span>Kattints a <strong>Prüfungssimulation</strong> gombra.</li>
+      <li><span class="step">2</span>Állítsd be a szintet, témát, vizsgarészt, eszközmódot és időtartamot.</li>
+      <li><span class="step">3</span>Nyomd meg a <strong>Simulation starten</strong> gombot.</li>
+    </ol>
+
+    <h3>Mit csinál a rendszer ilyenkor?</h3>
+    <ul>
+      <li>időzítőt indít,</li>
+      <li>rögzíti a kiválasztott feladatsort,</li>
+      <li>vizsgaszerűbb, fókuszált nézetet ad,</li>
+      <li>lejáratkor vagy kézi lezáráskor befejezhető a szimuláció.</li>
+    </ul>
+
+    <div class="note">
+      A jelenlegi verzióban a szimuláció főként <strong>időzítő + rögzített feladatsorrend + fókuszmód</strong>.
+      Nem teljes automatikus javítórendszer, és nem készít részletes pontozott vizsgaértékelést.
+    </div>
+
+    <h2>8. Diagnózis, tanulási terv és hibaprofil</h2>
+    <p>
+      A bal oldali összegző kártyák a saját használatod alapján frissülnek. Ezek akkor lesznek
+      igazán hasznosak, ha rendszeresen jelzed, hogy egy feladat ment-e vagy nem.
+    </p>
+
+    <div class="grid">
+      <div class="card">
+        <h3>Diagnózis</h3>
+        <p>
+          A rendszer a <strong>Verstanden</strong> és <strong>Unsicher</strong> jelölésekből számol egyszerű
+          sikerességi képet témák, operátorok, eszközmódok és vizsgarészek szerint.
+        </p>
+      </div>
+      <div class="card">
+        <h3>Tanulási terv</h3>
+        <p>
+          A Martha jelenleg rövid ajánlott sorrendet ad: gyakorlás, ismétlés, majd szimuláció a
+          leggyengébbnek látszó fókusz köré szervezve.
+        </p>
+      </div>
+      <div class="card">
+        <h3>Hibaprofil</h3>
+        <p>
+          Nyilvántartja, mely témákban vagy művelettípusokban maradt nyitott hibád vagy bizonytalanságod.
+        </p>
+      </div>
+      <div class="card">
+        <h3>Ismétlés</h3>
+        <p>
+          Nyitott hibák és egyszerű időzített ismétlési szabályok alapján jelzi, mely témát kell újra elővenni.
+        </p>
+      </div>
+    </div>
+
+    <div class="note">
+      Ezek a kártyák jelenleg rövid összefoglalók. Nem helyettesítenek részletes tanári értékelést,
+      hanem abban segítenek, hogy lásd, merre érdemes továbbmenni.
+    </div>
+
+    <h2>9. A „Verstanden” és „Unsicher” gombok szerepe</h2>
+    <p>
+      Ezek a gombok nem dísznek vannak. A rendszer ezekből tanul arról, hogy egy feladat valóban
+      ment-e neked.
+    </p>
+    <ul>
+      <li><strong>✔ Verstanden</strong>: akkor használd, ha valóban megértetted és önállóan is újra tudnád csinálni.</li>
+      <li><strong>✖ Unsicher</strong>: akkor nyomd meg, ha csak részben ment, sok segítség kellett, vagy még nem stabil a tudás.</li>
+    </ul>
+    <div class="box">
+      <strong>Fontos:</strong> ha őszintén jelölöd a saját állapotodat, a diagnózis, a hibaprofil és az ismétlési javaslatok sokkal hasznosabbak lesznek.
+    </div>
+
+    <h2>10. Ismétlés megnyitása</h2>
+    <p>
+      A <strong>🗂 Nächste Wiederholung</strong> gomb a következő esedékes ismétlési témára áll rá, majd
+      abból megnyit egy látható feladatot. Ez akkor különösen hasznos, ha nem tudod, mivel foglalkozz
+      tovább, és a rendszerre bíznád a sorrendet.
+    </p>
+
+    <h2>11. Hasonló feladat generálása</h2>
+    <p>
+      Az <strong>Üben</strong> funkcióval a kiválasztott feladathoz hasonló gyakorlófeladatot tudsz készíteni.
+      A nehézséget három szint közül lehet kiválasztani:
+    </p>
+    <ul>
+      <li><strong>Könnyebb</strong>: egyszerűbb számok, átláthatóbb szerkezet,</li>
+      <li><strong>Hasonló</strong>: az eredetihez közeli nehézség,</li>
+      <li><strong>Nehezebb</strong>: összetettebb változat vagy plusz részfeladat.</li>
+    </ul>
+    <p>
+      A létrehozott feladatot be is töltheted közvetlenül a Marthába, így rögtön folytathatod vele a munkát.
+    </p>
+    <div class="note">
+      A generált feladatokat a rendszer több próbálkozással, matematikai ellenőrzéssel hozza létre,
+      de ez továbbra is AI-generált tartalom. Vizsga előtti használatnál érdemes a logikáját is ellenőrizni.
+    </div>
+
+    <div class="break"></div>
+
+    <h2>12. Saját feladat feltöltése</h2>
+    <p>
+      A gemkapocs ikonra kattintva saját feladatot tölthetsz fel. A rendszer a következő formátumokat támogatja:
+    </p>
+    <ul>
+      <li>kép: például JPG vagy PNG,</li>
+      <li>PDF,</li>
+      <li>Word-fájl: DOC vagy DOCX.</li>
+    </ul>
+    <p>
+      Egyesével legfeljebb <strong>20 MB</strong> méretű fájl tölthető fel, többfájlos módban pedig
+      egyszerre legfeljebb <strong>10 fájl</strong> választható ki.
+    </p>
+
+    <h3>Hogyan működik?</h3>
+    <ol>
+      <li>Nyisd meg a feltöltés ablakot.</li>
+      <li>Húzd be a fájlt vagy válaszd ki kattintással.</li>
+      <li>Indítsd el az elemzést.</li>
+      <li>Ellenőrizd a kiolvasott feladatszöveget.</li>
+      <li>Töltsd be a feladatot a Marthába.</li>
+    </ol>
+
+    <div class="note">
+      A rendszer próbálja kiszűrni a megoldásoldalakat és a nem feladat típusú dokumentumokat is.
+      Ha a feltöltött oldal nem feladatot, hanem kész megoldást tartalmaz, erre külön figyelmeztetést adhat.
+      Több fájlt is fel lehet dolgozni egyszerre, és a sikeresen kiolvasott feladatokból a rendszer egy közös,
+      betölthető csomagot készít.
+    </div>
+
+    <h2>13. Ajánlott használat tanuláshoz</h2>
+    <p>
+      A Martha 4.0 akkor a leghasznosabb, ha nem csak alkalomszerűen használod, hanem tudatos tanulási rutint építesz rá.
+    </p>
+
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Helyzet</th>
+          <th>Ajánlott használat</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Új témakör tanulása</td>
+          <td>Válassz egy feladatot, kérj tippet vagy első lépést, majd oldj meg 2-3 hasonló feladatot.</td>
+        </tr>
+        <tr>
+          <td>Elakadás gyakorlás közben</td>
+          <td>Ne azonnal a teljes megoldást kérd. Először tipp, majd első lépés, és csak utána teljes út.</td>
+        </tr>
+        <tr>
+          <td>Vizsga előtti ismétlés</td>
+          <td>Használd az ismétlés és hibaprofil kártyákat, majd indíts rövidebb szimulációkat időnyomás-gyakorlásra.</td>
+        </tr>
+        <tr>
+          <td>Saját házi vagy fotózott feladat</td>
+          <td>Töltsd fel a feladatot, ellenőrizd a kiolvasást, majd dolgozz ugyanúgy, mint a beépített feladatokkal.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>14. Ajánlott napi rutin vizsga előtt</h2>
+    <ol>
+      <li>Nyiss meg egy gyenge témát vagy ismétlési feladatot.</li>
+      <li>Oldj meg 2-3 feladatot kevés segítséggel.</li>
+      <li>Őszintén jelöld, hogy <strong>Verstanden</strong> vagy <strong>Unsicher</strong>.</li>
+      <li>Generálj egy hasonló feladatot ugyanabból a típusból.</li>
+      <li>A nap végén nézd meg a tanulási tervet és az ismétlési javaslatot.</li>
+      <li>Hetente legalább egyszer csinálj időre egy rövid vizsgaszimulációt.</li>
+    </ol>
+
+    <h2>15. Tipikus problémák és megoldások</h2>
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Probléma</th>
+          <th>Mit érdemes tenni?</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Nem tudsz belépni</td>
+          <td>Próbáld újra a Google-bejelentkezést. Ha továbbra sem megy, lehet háttérrendszer-konfigurációs hiba.</td>
+        </tr>
+        <tr>
+          <td>A feltöltött PDF-ből rosszul olvassa ki a feladatot</td>
+          <td>Próbáld meg inkább képként vagy jobb minőségű fájlként feltölteni.</td>
+        </tr>
+        <tr>
+          <td>Túl gyorsan megkapod a teljes megoldást</td>
+          <td>Használd tudatosabban a Tipp és Első lépés gombokat.</td>
+        </tr>
+        <tr>
+          <td>Nem frissül a diagnózis</td>
+          <td>Rendszeresen jelöld a feladatok után, hogy értetted-e őket vagy bizonytalan vagy-e. Ezekből számol az összegzés.</td>
+        </tr>
+        <tr>
+          <td>Nem tudod, mivel gyakorolj tovább</td>
+          <td>Használd a következő ismétlés gombot vagy a tanulási tervet.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>16. Rövid összefoglaló</h2>
+    <p>
+      A Martha 4.0 nem csak egy chatablak, hanem egy tanulási rendszer. Akkor segít a legtöbbet,
+      ha feladatot választasz, fokozatos segítséget kérsz, őszintén jelzed a saját állapotodat,
+      és időnként vizsgaszimulációval is ellenőrzöd magad.
+    </p>
+    <div class="ok">
+      A leghatékonyabb használat kulcsa: <strong>ne csak választ kapj, hanem tanulási visszajelzést is gyűjts.</strong>
+    </div>
+
+    <div class="footer">
+      <p>Martha 4.0 felhasználói kézikönyv · magyar diákverzió</p>
+      <p class="small">
+        A kézikönyv a jelenlegi 4.0 felület alapján készült, ezért a jövőbeni fejlesztések után egyes
+        képernyők vagy funkciók részletei változhatnak.
+      </p>
+    </div>
+  </main>
+</body>
+</html>
