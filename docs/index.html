@@ -30,6 +30,7 @@
 <script src="analysis-redraw.js"></script>
 <script src="vector-redraw.js"></script>
 <script src="figure-redraw.js"></script>
+<script src="chat-context.js"></script>
 <script src="forecast.js"></script>
 <script src="ui-helpers.js"></script>
 <script src="tasks-normalize.js"></script>
@@ -536,6 +537,7 @@ const state = {
   forecastLevel: "",
   selectedForecastVariantId: "",
   loadedForecastVariant: null,
+  chatContextKey: "base",
 };
 
 const appStorage = window.MarthaStorage ? window.MarthaStorage.createStorage("martha4") : null;
@@ -545,7 +547,19 @@ function getActiveTask() {
 }
 
 function getActiveHistoryKey() {
-  return state.selectedBlockId || String(state.selectedIdx);
+  return window.MarthaChatContext && typeof window.MarthaChatContext.buildChatHistoryKey === "function"
+    ? window.MarthaChatContext.buildChatHistoryKey({
+        chatContextKey: state.chatContextKey,
+        selectedBlockId: state.selectedBlockId,
+        selectedIdx: state.selectedIdx,
+      })
+    : (state.selectedBlockId || String(state.selectedIdx));
+}
+
+function startNewChatContext(prefix) {
+  state.chatContextKey = window.MarthaChatContext && typeof window.MarthaChatContext.createChatContextKey === "function"
+    ? window.MarthaChatContext.createChatContextKey(prefix)
+    : [prefix || "base", Date.now()].join(":");
 }
 
 function refreshTaskIndex() {
@@ -945,6 +959,7 @@ function loadForecastVariantById(variantId, focusBlockId = "") {
   state.currentToolType = "";
   state.selectedBlockId = "";
   state.selectedTaskRef = null;
+  startNewChatContext("forecast");
   state.loadedForecastVariant = {
     id: variant.id,
     label: variant.label,
@@ -992,6 +1007,7 @@ function startSimulation() {
   state.currentToolType = toolType;
   state.selectedBlockId = "";
   state.selectedTaskRef = null;
+  startNewChatContext("simulation");
   applyFilters();
 
   state.activeSimulation = window.MarthaSimulation.createSimulationRun({
@@ -1926,6 +1942,7 @@ async function renderChat(i) {
   taskBubbleInner.appendChild(document.createElement('br'));
   taskBubbleInner.appendChild(document.createElement('br'));
   const taskText = document.createElement('span');
+  taskText.className = 'task-question-text';
   taskText.textContent = questionLatex;
   taskBubbleInner.appendChild(taskText);
   taskBubbleDiv.appendChild(taskBubbleInner);
@@ -1943,11 +1960,21 @@ async function renderChat(i) {
     el.appendChild(messagesHost);
   }
 
-  const taskRenderKey = [
-    state.selectedBlockId || t.task_id || i,
-    _currentLang,
-    questionSource,
-  ].join('::');
+  const taskRenderKey = window.MarthaChatContext && typeof window.MarthaChatContext.buildTaskRenderKey === "function"
+    ? window.MarthaChatContext.buildTaskRenderKey({
+        chatContextKey: state.chatContextKey,
+        selectedBlockId: state.selectedBlockId,
+        taskId: t.task_id,
+        taskIndex: i,
+        lang: _currentLang,
+        questionSource,
+      })
+    : [
+        state.chatContextKey,
+        state.selectedBlockId || t.task_id || i,
+        _currentLang,
+        questionSource,
+      ].join('::');
 
   if (taskHost.dataset.renderKey !== taskRenderKey) {
     taskHost.innerHTML = '';
