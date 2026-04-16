@@ -4,6 +4,11 @@
     : root && root.MarthaFigureSources
       ? root.MarthaFigureSources
       : null;
+  const figureRedrawApi = typeof module !== "undefined" && module.exports
+    ? require("./figure-redraw.js")
+    : root && root.MarthaFigureRedraw
+      ? root.MarthaFigureRedraw
+      : null;
 
   function buildTaskMetaBits(task) {
     const source = (task && task.source) || {};
@@ -115,8 +120,25 @@
     preview.className = "pdf-preview";
     panel.appendChild(preview);
 
+    const redraw = doc.createElement("div");
+    redraw.className = "pdf-redraw";
+    panel.appendChild(redraw);
+
+    const redrawBadge = doc.createElement("div");
+    redrawBadge.className = "pdf-validation-badge status-" + ((task.redrawState && task.redrawState.status) || "preview-only");
+    redrawBadge.textContent = task.redrawState && task.redrawState.status === "validated"
+      ? "Redraw validiert"
+      : task.redrawState && task.redrawState.status === "uncertain"
+        ? "Redraw unsicher"
+        : task.redrawState && task.redrawState.status === "unavailable"
+          ? "Keine sichere Darstellung verfügbar"
+          : "Nur PDF-Vorschau";
+    panel.appendChild(redrawBadge);
+
     panel._task = task;
     panel._sources = sources;
+    panel._redrawHost = redraw;
+    panel._redrawBadge = redrawBadge;
     return panel;
   }
 
@@ -126,13 +148,36 @@
     panel.dataset.hydrated = "true";
     const preview = panel.querySelector(".pdf-preview");
     try {
-      await root.MarthaPdfFigure.renderFigurePreview(preview, {
+      const pdfValidation = await root.MarthaPdfFigure.renderFigurePreview(preview, {
         task: panel._task,
         sources: panel._sources,
       });
       const statusText = preview.dataset.status || "PDF-Quelle bereit.";
       const headStatus = panel.querySelector(".pdf-panel-head span");
       if (headStatus) headStatus.textContent = statusText;
+      if (figureRedrawApi && typeof figureRedrawApi.buildFigureRedrawForTask === "function" && panel._redrawHost) {
+        const redrawState = figureRedrawApi.buildFigureRedrawForTask({
+          task: panel._task,
+          pdfValidation,
+        });
+        panel._task.redrawState = redrawState;
+        if (panel._redrawBadge) {
+          panel._redrawBadge.className = "pdf-validation-badge status-" + redrawState.status;
+          panel._redrawBadge.textContent = redrawState.status === "validated"
+            ? "Redraw validiert"
+            : redrawState.status === "uncertain"
+              ? "Redraw unsicher"
+              : redrawState.status === "unavailable"
+                ? "Keine sichere Darstellung verfügbar"
+                : "Nur PDF-Vorschau";
+        }
+        if (typeof figureRedrawApi.renderFigureRedraw === "function") {
+          const rendered = figureRedrawApi.renderFigureRedraw(panel._redrawHost, redrawState);
+          if (!rendered) {
+            panel._redrawHost.innerHTML = '<div class="pdf-preview-status">Für diese Aufgabe ist aktuell kein sicheres Redraw verfügbar.</div>';
+          }
+        }
+      }
     } catch (_) {
       const headStatus = panel.querySelector(".pdf-panel-head span");
       if (headStatus) headStatus.textContent = "PDF-Vorschau konnte nicht geladen werden.";

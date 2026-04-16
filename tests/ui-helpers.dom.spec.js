@@ -2,6 +2,7 @@ const { screen } = require("@testing-library/dom");
 const {
   buildTaskMetaBits,
   buildTaskNoticeMessages,
+  createFigurePanel,
   createNoticeElement,
   renderTaskNoticeMessages,
 } = require("../ui-helpers.js");
@@ -50,5 +51,16 @@ describe("ui helpers", () => {
       "href",
       expect.stringContaining("Mathematik_LK_2025-Beispiel_1_Prüfungsteil_LK_Wahlpflichtaufgabe_bis_2025.pdf")
     );
+  });
+
+  it("renders a redraw status badge when a validated redraw is available", () => {
+    const panel = createFigurePanel(document, {
+      figureRequired: true,
+      figureLabel: "Abbildung 1",
+      redrawState: { status: "validated", engine: "analysis", model: { kind: "analysis-redraw" } },
+    });
+
+    expect(panel.querySelector(".pdf-panel-head")).toBeTruthy();
+    expect(panel.textContent).toMatch(/Redraw validiert/);
   });
 });

@@ -43,6 +43,18 @@ describe("solution guards", () => {
     expect(result.issues.some((issue) => issue.code === "missing-figure-reference")).toBe(true);
   });
 
+  it("flags certainty claims when redraw status is uncertain", () => {
+    const result = evaluateDraft({
+      task: {
+        figureRequired: true,
+        redrawState: { status: "uncertain" },
+      },
+      draft: "Aus der Zeichnung erkennt man sicher, dass die Gerade orthogonal ist.",
+    });
+
+    expect(result.ok).toBe(false);
+  });
+
   it("blocks wrong vector geometry claims through the main solution guard", () => {
     const result = evaluateDraft({
       task: {

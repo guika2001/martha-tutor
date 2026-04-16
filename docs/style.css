@@ -102,10 +102,15 @@ body.simulation-mode .ch{position:sticky;top:0;z-index:5}
 .pdf-panel-links{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
 .pdf-chip{display:inline-flex;align-items:center;padding:6px 10px;border-radius:999px;background:rgba(96,165,250,.12);border:1px solid rgba(96,165,250,.2);color:var(--blu);font-size:.76rem;font-weight:600;text-decoration:none}
 .pdf-preview{display:flex;flex-direction:column;gap:10px}
+.pdf-redraw{display:flex;flex-direction:column;gap:10px;margin-top:12px}
 .pdf-preview-status{font-size:.76rem;color:var(--tx2)}
 .pdf-preview-canvas{max-width:100%;height:auto;border-radius:10px;border:1px solid var(--bd);background:#fff}
 .pdf-open-link{font-size:.78rem;color:var(--ac);text-decoration:none}
 .pdf-open-link:hover{text-decoration:underline}
+.pdf-validation-badge{display:inline-flex;align-items:center;justify-content:center;margin-top:10px;padding:6px 10px;border-radius:999px;font-size:.76rem;font-weight:700}
+.pdf-validation-badge.status-validated{background:rgba(52,211,153,.14);color:var(--grn);border:1px solid rgba(52,211,153,.24)}
+.pdf-validation-badge.status-uncertain{background:rgba(251,191,36,.14);color:var(--amb);border:1px solid rgba(251,191,36,.24)}
+.pdf-validation-badge.status-preview-only,.pdf-validation-badge.status-unavailable{background:rgba(124,130,160,.18);color:var(--tx2);border:1px solid rgba(124,130,160,.24)}
 .forecast-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
 .forecast-card{background:var(--s2);border:1px solid var(--bd);border-radius:14px;padding:14px}
 .forecast-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px}

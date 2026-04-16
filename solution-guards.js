@@ -76,6 +76,15 @@
       });
     }
 
+    if (task && task.redrawState && task.redrawState.status === "uncertain" &&
+        /aus der zeichnung.*sicher|eindeutig aus der abbildung/i.test(text)) {
+      issues.push({
+        code: "uncertain-redraw-claim",
+        severity: "blocking",
+        message: "Die Antwort behandelt eine unsichere Redraw-Darstellung als sicheren Beleg.",
+      });
+    }
+
     if (analysisApi) {
       const expression = analysisApi.extractFunctionExpressionFromTask
         ? analysisApi.extractFunctionExpressionFromTask(task)

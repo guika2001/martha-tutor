@@ -130,6 +130,7 @@
       footer.rel = "noopener noreferrer";
       footer.textContent = "PDF auf passender Seite öffnen";
       container.appendChild(footer);
+      return validation;
     } catch (error) {
       container.dataset.status = "PDF-Vorschau fehlgeschlagen";
       status.textContent = "PDF-Vorschau konnte nicht geladen werden.";
@@ -137,6 +138,7 @@
       err.className = "abw";
       err.textContent = error.message || "Unbekannter PDF-Fehler";
       container.appendChild(err);
+      return { ok: false, pageNumber: 0, matches: [], score: 0, totalTokens: 0, error: error.message || "Unbekannter PDF-Fehler" };
     }
   }
 
