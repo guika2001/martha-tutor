@@ -428,6 +428,18 @@ function refreshTaskIndex() {
   }
 }
 
+function cleanTaskText(text) {
+  if (window.MarthaTaskNav && typeof window.MarthaTaskNav.stripTaskLeadIn === "function") {
+    return window.MarthaTaskNav.stripTaskLeadIn(text || "");
+  }
+  return text || "";
+}
+
+function getPlottableTaskText(task) {
+  if (!task) return "";
+  return cleanTaskText(task.question || "") + "\n" + cleanTaskText(task.expected_answer || "");
+}
+
 
 // ══ math.js ══
 // ── math.js ──────────────────────────────────────────────────────────────────
@@ -769,16 +781,17 @@ if (window.MarthaPlot) {
 
 /** Build task context string for the system prompt */
 function buildContext(task) {
-  const question = plainMathToLatex(task.question || "Kein Text.");
+  const question = plainMathToLatex(cleanTaskText(task.question || "Kein Text."));
   const parts = [
     `AUFGABE: ${task.task_id || "Aufgabe"}`,
     `THEMA: ${task.topic || "?"} - ${task.subtopic || "?"}`,
     `PUNKTE: ${task.points || "?"} BE`,
     `KURS: ${(task.source || {}).level || "?"}`,
+    `JAHR/FILTER: ${(task.source || {}).year || "?"}`,
     `\nAUFGABENTEXT:\n${question}`,
   ];
   if (task.expected_answer) {
-    parts.push(`\nOFFIZIELLE MUSTERLOESUNG:\n${plainMathToLatex(task.expected_answer)}`);
+    parts.push(`\nOFFIZIELLE MUSTERLOESUNG:\n${plainMathToLatex(cleanTaskText(task.expected_answer))}`);
   }
   return parts.join("\n");
 }
@@ -919,8 +932,8 @@ function renderFilters() {
   const el = document.getElementById("ff");
   const path = [];
   if (state.levelFilter !== "all") path.push(state.levelFilter);
-  if (state.currentYear) path.push(state.currentYear);
   if (state.currentTopic) path.push(state.currentTopic);
+  const years = state.filtered && state.filtered.filters ? state.filtered.filters.years || [] : [];
   el.innerHTML = "";
   const back = document.createElement("button");
   back.className = "fb";
@@ -930,8 +943,22 @@ function renderFilters() {
   el.appendChild(back);
   const label = document.createElement("div");
   label.className = "nav-path";
-  label.textContent = path.length ? path.join(" · ") : "GK/LK → Jahr → Thema → Aufgabenblock";
+  label.textContent = path.length ? path.join(" · ") : "GK/LK → Thema → Aufgabenblock";
   el.appendChild(label);
+  if (years.length > 1) {
+    const yearRow = document.createElement("div");
+    yearRow.className = "fr";
+    yearRow.style.padding = "8px 0 0";
+    years.forEach((year) => {
+      const btn = document.createElement("button");
+      btn.className = "fb" + ((state.currentYear || "") === year.id ? " on" : "");
+      btn.textContent = year.label;
+      btn.title = year.count + " Aufgaben";
+      btn.onclick = () => window._setYearFilter(year.id);
+      yearRow.appendChild(btn);
+    });
+    el.appendChild(yearRow);
+  }
 }
 
 function applyFilters() {
@@ -942,9 +969,10 @@ function applyFilters() {
   }
   state.filtered = window.MarthaTaskNav.getVisibleItems(state.taskIndex, {
     level: state.levelFilter === "all" ? "" : state.levelFilter,
-    year: state.currentYear,
     topic: state.currentTopic,
+    year: state.currentYear,
   });
+  renderFilters();
   renderTaskList();
 }
 
@@ -983,13 +1011,12 @@ function renderTaskList() {
     title.className = "tit";
     const name = document.createElement("div");
     name.className = "n";
-    name.textContent = item.label;
+    name.textContent = view.kind === "block" ? (item.displayLabel || item.label) : item.label;
     const meta = document.createElement("div");
     meta.className = "m";
     if (view.kind === "level") meta.textContent = item.count + " Aufgaben";
-    else if (view.kind === "year") meta.textContent = (state.levelFilter === "all" ? item.id + " · " : "") + item.count + " Aufgaben";
     else if (view.kind === "topic") meta.textContent = item.count + " Aufgaben";
-    else meta.textContent = item.taskIndexes.length + " Teilaufgaben · " + item.year;
+    else meta.textContent = item.year + " · " + item.taskIndexes.length + " Teilaufgaben";
     title.appendChild(name);
     title.appendChild(meta);
     row.appendChild(icon);
@@ -1000,7 +1027,6 @@ function renderTaskList() {
     row.appendChild(badge);
 
     if (view.kind === "level") row.onclick = () => window._sL(item.id, null);
-    else if (view.kind === "year") row.onclick = () => window._navYear(item.id);
     else if (view.kind === "topic") row.onclick = () => window._navTopic(item.id);
     else {
       if (item.id === state.selectedBlockId) row.classList.add("sel");
@@ -1029,11 +1055,15 @@ window._sL = (level, btn) => {
   }
   applyFilters();
 };
-window._navYear = (year) => { state.currentYear = year; state.currentTopic = ""; state.selectedBlockId = ""; state.selectedTaskRef = null; applyFilters(); };
+window._setYearFilter = (year) => {
+  state.currentYear = year;
+  state.selectedBlockId = "";
+  state.selectedTaskRef = null;
+  applyFilters();
+};
 window._navTopic = (topic) => { state.currentTopic = topic; state.selectedBlockId = ""; state.selectedTaskRef = null; applyFilters(); };
 window._navBack = () => {
   if (state.currentTopic) state.currentTopic = "";
-  else if (state.currentYear) state.currentYear = "";
   else if (state.levelFilter !== "all") state.levelFilter = "all";
   state.selectedBlockId = "";
   state.selectedTaskRef = null;
@@ -1041,8 +1071,7 @@ window._navBack = () => {
 };
 window._selectBlock = (blockId) => {
   const block = state.taskIndex.levels
-    .flatMap((level) => level.years)
-    .flatMap((year) => year.topics)
+    .flatMap((level) => level.topics)
     .flatMap((topic) => topic.blocks)
     .find((entry) => entry.id === blockId);
   if (!block) return;
@@ -1068,6 +1097,7 @@ async function getTranslatedQuestion(i) {
 
   const t = state.tasks[i];
   if (!t || !t.question) return null;
+  const sourceQuestion = cleanTaskText(t.question);
 
   // Mark as loading
   _translCache[key] = "__loading__";
@@ -1081,7 +1111,7 @@ async function getTranslatedQuestion(i) {
         content: "You are a mathematical text translator. Output ONLY the translated text — no explanations, no meta-commentary, no quotes around the result. Translate natural language to " + targetLang + ". Keep ALL math expressions unchanged: f(x), x ∈ ℝ, formulas, numbers, variable names."
       }, {
         role: "user",
-        content: "Translate this math task to " + targetLang + ". Output ONLY the translation, nothing else:\n\n" + t.question
+        content: "Translate this math task to " + targetLang + ". Output ONLY the translation, nothing else:\n\n" + sourceQuestion
       }],
       stream: false,
       temperature: 0.1,
@@ -1108,7 +1138,7 @@ function sel(i) {
   const t = getActiveTask(), sr = (t && t.source) || {};
   if (!t) return;
   document.getElementById('cht').textContent = t.task_id || 'Aufgabe';
-  document.getElementById('chs').textContent = (t.topic||'') + ' \u00b7 ' + (sr.level||'') + (t.points ? ' \u00b7 ' + t.points + ' BE' : '');
+  document.getElementById('chs').textContent = (t.topic||'') + ' \u00b7 ' + (sr.level||'') + (sr.year ? ' \u00b7 ' + sr.year : '') + (t.points ? ' \u00b7 ' + t.points + ' BE' : '');
   document.getElementById('cin').style.display = 'flex';
   document.getElementById('qa').style.display = 'flex';
   document.getElementById('app').classList.add('co');
@@ -1116,7 +1146,7 @@ function sel(i) {
   const cms = document.getElementById('cms');
   if (welcome) welcome.style.display = 'none';
   if (cms) cms.style.display = 'block';
-  const funcs = extractFunctions((t.question||'') + ' ' + (t.expected_answer||''));
+  const funcs = extractFunctions(getPlottableTaskText(t));
   document.getElementById('btn-plot').style.display = funcs.length ? 'inline-block' : 'none';
   document.getElementById('btn-practice').style.display = t.isSyntheticBlock ? 'none' : 'inline-block';
   const historyKey = getActiveHistoryKey();
@@ -1136,7 +1166,7 @@ async function renderChat(i) {
 
   // Try to get translated question (non-blocking — uses DE as fallback)
   const translated = t.isSyntheticBlock ? null : await getTranslatedQuestion(i);
-  const questionSource = translated || t.question || 'Kein Text.';
+  const questionSource = translated || cleanTaskText(t.question || 'Kein Text.');
   const questionLatex = plainMathToLatex(questionSource);
 
   const taskBubbleDiv = document.createElement('div');
@@ -1192,7 +1222,7 @@ function plotFromTask() {
   if (state.selectedIdx < 0) return;
   const t = getActiveTask();
   if (!t) return;
-  const funcs = extractFunctions((t.question||'') + ' ' + (t.expected_answer||''));
+  const funcs = extractFunctions(getPlottableTaskText(t));
   const el = document.getElementById('cms');
   if (!funcs.length) { quickSend(getUI().plot); return; }
   funcs.forEach(f => {
@@ -1224,7 +1254,7 @@ async function sendMessage() {
   const drawWords = ['zeichne','plot','rajzol','draw','dibujar'];
   if (drawWords.some(w => txt.toLowerCase().includes(w))) {
     const t = getActiveTask();
-    if (extractFunctions((t.question||'')+(t.expected_answer||'')).length) { plotFromTask(); return; }
+    if (extractFunctions(getPlottableTaskText(t)).length) { plotFromTask(); return; }
   }
   const i = state.selectedIdx;
   const historyKey = getActiveHistoryKey();

@@ -3,6 +3,7 @@ const {
   getVisibleItems,
   findBlockIdByTaskIndex,
   buildCombinedTask,
+  stripTaskLeadIn,
 } = require("../tasks-normalize.js");
 
 describe("task navigator normalization", () => {
@@ -17,6 +18,14 @@ describe("task navigator normalization", () => {
   it("keeps level groups separate", () => {
     const index = buildTaskIndex(sampleTasks);
     expect(index.levels.map((item) => item.id)).toEqual(["GK", "LK"]);
+  });
+
+  it("uses year as a filter while topic stays the navigation step", () => {
+    const index = buildTaskIndex(sampleTasks);
+    const topicView = getVisibleItems(index, { level: "LK", year: "2025-Beispiel", topic: "" });
+    expect(topicView.kind).toBe("topic");
+    expect(topicView.filters.years.map((item) => item.id)).toEqual(["", "2025-Beispiel"]);
+    expect(topicView.items).toHaveLength(1);
   });
 
   it("groups related subtasks into a task block", () => {
@@ -37,7 +46,12 @@ describe("task navigator normalization", () => {
     const block = getVisibleItems(index, { level: "LK", year: "2025-Beispiel", topic: "Stochastik" }).items[0];
     const synthetic = buildCombinedTask(block);
     expect(synthetic.isSyntheticBlock).toBe(true);
-    expect(synthetic.question).toContain("[Aufgabe a) (1)]");
-    expect(synthetic.expected_answer).toContain("[Aufgabe a) (2)]");
+    expect(synthetic.task_id).not.toContain("Aufgabe a)");
+    expect(synthetic.question).toContain("Teil 1");
+  });
+
+  it("removes generic NRW lead-in boilerplate", () => {
+    const cleaned = stripTaskLeadIn("Löse folgende Aufgabe aus dem NRW Abitur 2025-Beispiel (Mathematik, GK):\n\nEine Funktion f ist gegeben.");
+    expect(cleaned).toBe("Eine Funktion f ist gegeben.");
   });
 });

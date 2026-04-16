@@ -17,6 +17,11 @@ describe("plot helpers", () => {
     expect(match[0].expr).toBe("4000*x*exp(-0.4*x)");
   });
 
+  it("ignores solved equations that are not functions", () => {
+    const match = extractFunctions("f(x)=0 ⇔ x=-√3 ∨ x=0 ∨ x=√3");
+    expect(match).toHaveLength(0);
+  });
+
   it("detects explicit plot commands", () => {
     const plots = detectPlots("PLOT(x^3-3*x, -3, 3)");
     expect(plots).toHaveLength(1);
@@ -25,6 +30,10 @@ describe("plot helpers", () => {
 
   it("rejects symbolic coefficient terms", () => {
     expect(validatePlotExpression("ax^2+bx").ok).toBe(false);
+  });
+
+  it("rejects equality chains as plot input", () => {
+    expect(validatePlotExpression("0 ⇔ x=-√3").ok).toBe(false);
   });
 
   it("uses a positive default range for logarithms", () => {

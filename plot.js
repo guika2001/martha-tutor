@@ -24,28 +24,44 @@
     return !/[a-zA-ZáéíóöőúüűÄÖÜäöüß]{2,}/.test(stripped);
   }
 
+  function containsUnsupportedRelations(expr) {
+    return /[=<>]|⇔|⇒|≤|≥|!=|:=/.test(expr);
+  }
+
+  function cleanupCandidateExpression(expr) {
+    let cleaned = expr.trim();
+    cleaned = cleaned.replace(/\s+[a-zA-ZáéíóöőúüűÁÉÍÓÖŐÚÜŰäöüÄÖÜß]{2,}.*$/, (match) => {
+      const word = match.trim().split(/\s+/)[0].toLowerCase();
+      const mathWords = new Set(["exp", "sin", "cos", "tan", "log", "sqrt", "pi", "abs", "ln"]);
+      return mathWords.has(word) ? match : "";
+    });
+    cleaned = cleaned.trim().replace(/[,;.\s]+$/, "");
+    cleaned = cleaned.replace(/\s*x\s*(?:in|∈)\s*[a-zA-Zℝ].*$/i, "").trim();
+    cleaned = cleaned.replace(/^\((.*)\)$/, "$1").trim();
+    if (containsUnsupportedRelations(cleaned)) return "";
+    if (!cleaned.includes("x")) return "";
+    cleaned = cleaned.replace(/(\d)([x(])/g, "$1*$2");
+    cleaned = cleaned.replace(/([)])(\d)/g, "$1*$2");
+    cleaned = cleaned.replace(/([x)])([x(])/g, "$1*$2");
+    cleaned = cleaned.replace(/ln\(/g, "log(");
+    return cleaned;
+  }
+
   function extractFunctions(text) {
     const t = normalizePlotExpression(text);
     if (!t) return [];
-    const mathWords = new Set(["exp", "sin", "cos", "tan", "log", "sqrt", "pi", "abs", "ln", "max", "min"]);
     const pat = /([fghDupw])\s*\(\s*x\s*\)\s*=\s*([^,;\n]+)/gm;
     const results = [];
+    const seen = new Set();
     let m;
     while ((m = pat.exec(t)) !== null) {
-      let expr = m[2].trim();
-      expr = expr.replace(/\s+[a-zA-ZáéíóöőúüűÁÉÍÓÖŐÚÜŰäöüÄÖÜß]{2,}.*$/, (match) => {
-        const word = match.trim().split(/\s+/)[0].toLowerCase();
-        return mathWords.has(word) ? match : "";
-      });
-      expr = expr.trim().replace(/[,;.\s]+$/, "");
-      if (expr.length < 3 || !expr.includes("x")) continue;
+      let expr = cleanupCandidateExpression(m[2]);
+      if (expr.length < 3) continue;
       if (!hasOnlySupportedIdentifiers(expr.replace(/ln\(/g, "log("))) continue;
       const noMath = expr.replace(/exp|sin|cos|tan|log|sqrt|abs|pi/g, "##");
       if (/(?<!\w)[a-wyzA-WYZ](?=\*?x|\^|\*|\s*[+\-])/.test(noMath)) continue;
-      expr = expr.replace(/(\d)([x(])/g, "$1*$2");
-      expr = expr.replace(/([)])(\d)/g, "$1*$2");
-      expr = expr.replace(/([x)])([x(])/g, "$1*$2");
-      expr = expr.replace(/ln\(/g, "log(");
+      if (seen.has(expr)) continue;
+      seen.add(expr);
       results.push({ name: m[1], expr });
     }
     return results;
@@ -88,6 +104,9 @@
       .replace(/([x)])([x(])/g, "$1*$2");
     if (!normalized || !normalized.includes("x")) {
       return { ok: false, reason: "Kein plottbarer Funktionsterm mit x gefunden." };
+    }
+    if (containsUnsupportedRelations(normalized)) {
+      return { ok: false, reason: "Der Ausdruck ist eine Gleichung oder Relation, keine Funktion." };
     }
     if (!hasOnlySupportedIdentifiers(normalized)) {
       return { ok: false, reason: "Der Term enthält nicht unterstützte Bezeichner." };
