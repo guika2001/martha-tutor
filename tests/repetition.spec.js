@@ -1,4 +1,4 @@
-const { buildRepetitionQueue, getNextRepetitionDueAt } = require("../repetition.js");
+const { buildRepetitionQueue, getNextRepetitionDueAt, buildNextRepetitionSelection } = require("../repetition.js");
 
 describe("repetition", () => {
   it("prioritizes unresolved and overdue repetitions", () => {
@@ -37,5 +37,24 @@ describe("repetition", () => {
     });
 
     expect(dueAt).toBe(4_000 + (24 * 60 * 60 * 1000 * 3));
+  });
+
+  it("builds a next-repetition selection that clears restrictive filters", () => {
+    const selection = buildNextRepetitionSelection({
+      queue: [{ topic: "Vektorielle Geometrie", reason: "open-error" }],
+      events: [
+        { topic: "Analysis", level: "GK", timestamp: 100 },
+        { topic: "Vektorielle Geometrie", level: "LK", timestamp: 200 },
+      ],
+    });
+
+    expect(selection).toEqual({
+      topic: "Vektorielle Geometrie",
+      level: "LK",
+      year: "",
+      examPart: "",
+      taskType: "",
+      toolType: "",
+    });
   });
 });

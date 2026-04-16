@@ -718,11 +718,20 @@ function describeRepetitionReason(reason) {
 }
 
 function openNextRepetitionTask() {
-  const queue = getRepetitionQueue(loadPerformanceEvents(), buildErrorProfileFromEvents(loadPerformanceEvents()));
-  const next = queue[0];
-  if (!next) return;
+  const events = loadPerformanceEvents();
+  const queue = getRepetitionQueue(events, buildErrorProfileFromEvents(events));
+  const selection = window.MarthaRepetition && typeof window.MarthaRepetition.buildNextRepetitionSelection === "function"
+    ? window.MarthaRepetition.buildNextRepetitionSelection({ queue, events })
+    : null;
+  if (!selection) return;
 
-  state.currentTopic = next.topic;
+  clearForecastState();
+  state.levelFilter = selection.level || "all";
+  state.currentTopic = selection.topic || "";
+  state.currentYear = selection.year || "";
+  state.currentExamPart = selection.examPart || "";
+  state.currentTaskType = selection.taskType || "";
+  state.currentToolType = selection.toolType || "";
   state.selectedBlockId = "";
   state.selectedTaskRef = null;
   applyFilters();
@@ -793,6 +802,7 @@ function recordTaskOutcome(success) {
   const events = loadPerformanceEvents();
   events.push({
     topic: task.topic || null,
+    level: (task.source || {}).level || null,
     operator: task.primaryOperator || null,
     toolMode: task.toolMode || null,
     examPart: task.examPart || null,

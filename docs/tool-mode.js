@@ -10,12 +10,7 @@
   }
 
   function buildToolModeHint(toolMode) {
-    if (!toolMode) {
-      return {
-        status: "uncertain",
-        message: "Werkzeugmodus unklar. Diese Aufgabe nicht als gesicherte CAS/WTR-Vorlage behandeln.",
-      };
-    }
+    if (!toolMode) return null;
 
     const messages = {
       none: "Hilfsmittelfrei: Rechenschritte und Argumentation vollständig ausformulieren.",

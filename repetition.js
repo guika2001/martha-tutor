@@ -34,7 +34,26 @@
     });
   }
 
-  const api = { buildRepetitionQueue, getNextRepetitionDueAt };
+  function buildNextRepetitionSelection({ queue = [], events = [] } = {}) {
+    const next = queue[0];
+    if (!next) return null;
+
+    const matchingEvents = (events || [])
+      .filter((event) => event && event.topic === next.topic)
+      .sort((left, right) => (right.timestamp || 0) - (left.timestamp || 0));
+    const latest = matchingEvents[0] || null;
+
+    return {
+      topic: next.topic,
+      level: latest && latest.level ? latest.level : "all",
+      year: "",
+      examPart: "",
+      taskType: "",
+      toolType: "",
+    };
+  }
+
+  const api = { buildRepetitionQueue, getNextRepetitionDueAt, buildNextRepetitionSelection };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   if (root) root.MarthaRepetition = api;
 })(typeof window !== "undefined" ? window : globalThis);
