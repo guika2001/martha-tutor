@@ -174,7 +174,12 @@
         if (redrawState.status === "validated" && typeof figureRedrawApi.renderFigureRedraw === "function") {
           const rendered = figureRedrawApi.renderFigureRedraw(panel._redrawHost, redrawState);
           if (!rendered) {
+            redrawState.status = "preview-only";
             panel._redrawHost.innerHTML = '<div class="pdf-preview-status">Für diese Aufgabe ist aktuell kein sicheres Redraw verfügbar.</div>';
+            if (panel._redrawBadge) {
+              panel._redrawBadge.className = "pdf-validation-badge status-preview-only";
+              panel._redrawBadge.textContent = "Nur PDF-Vorschau";
+            }
           }
         } else if (panel._redrawHost) {
           panel._redrawHost.innerHTML = '<div class="pdf-preview-status">Für diese Aufgabe wird bewusst nur die validierte PDF-Vorschau gezeigt.</div>';

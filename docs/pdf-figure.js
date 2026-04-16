@@ -97,19 +97,24 @@
   function findFigureAnchor(items, figureLabel) {
     const wanted = normalizeToken(figureLabel || "");
     if (!wanted) return null;
-    return normalizeTextItems(items).find((item) => normalizeToken(item.str).includes(wanted)) || null;
+    const matches = normalizeTextItems(items).filter((item) => normalizeToken(item.str).includes(wanted));
+    if (!matches.length) return null;
+    return matches.sort((a, b) => a.y - b.y || b.width - a.width)[0];
   }
 
   function deriveFigureCropBox({ pageWidth, pageHeight, anchor, topic }) {
     if (!anchor || !pageWidth || !pageHeight) return null;
     const topicKey = String(topic || "").toLowerCase();
-    const widthRatio = topicKey.includes("geometrie") ? 0.42 : 0.36;
-    const heightRatio = topicKey.includes("geometrie") ? 0.5 : 0.46;
-    const left = Math.max(0, Math.min(pageWidth - (pageWidth * widthRatio), anchor.x - pageWidth * 0.16));
-    const bottom = Math.max(0, anchor.y - pageHeight * 0.06);
-    const width = Math.min(pageWidth - left, pageWidth * widthRatio);
-    const height = Math.min(pageHeight - bottom, pageHeight * heightRatio);
-    return { x: left, y: bottom, width, height };
+    const widthRatio = topicKey.includes("geometrie") ? 0.62 : 0.72;
+    const heightRatio = topicKey.includes("geometrie") ? 0.58 : 0.64;
+    const width = pageWidth * widthRatio;
+    const height = pageHeight * heightRatio;
+    const left = Math.max(0, Math.min(pageWidth - width, anchor.x - width * 0.45));
+    const bottom = Math.max(0, Math.min(pageHeight - height, anchor.y - height * 0.12));
+    const crop = { x: left, y: bottom, width, height };
+    if ((crop.width / pageWidth) < 0.55 || (crop.height / pageHeight) < 0.45) return null;
+    if ((crop.width / crop.height) < 0.6) return null;
+    return crop;
   }
 
   async function renderPageToCanvas(sourceHref, pageNumber, canvas, cropBox = null) {
@@ -157,12 +162,13 @@
       const page = await pdf.getPage(targetPage);
       const textContent = await page.getTextContent();
       const anchor = findFigureAnchor(textContent.items, task && task.figureLabel);
-      const cropBox = deriveFigureCropBox({
+      let cropBox = deriveFigureCropBox({
         pageWidth: page.view[2],
         pageHeight: page.view[3],
         anchor,
         topic: task && task.topic,
       });
+      if (cropBox && validation.score < 2) cropBox = null;
       await renderPageToCanvas(primary.href, targetPage, canvas, cropBox);
       container.dataset.status = validation.ok
         ? `PDF-Quelle validiert · Seite ${targetPage}${cropBox ? " · Ausschnitt" : ""}`

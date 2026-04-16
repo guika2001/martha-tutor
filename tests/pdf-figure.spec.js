@@ -13,6 +13,15 @@ describe("pdf figure helpers", () => {
     expect(anchor).toMatchObject({ str: "Abbildung 3", x: 280, y: 140 });
   });
 
+  it("prefers the lowest matching anchor when the label appears multiple times", () => {
+    const anchor = findFigureAnchor([
+      { str: "siehe Abbildung 1", transform: [1, 0, 0, 1, 90, 620], width: 100, height: 10 },
+      { str: "Abbildung 1", transform: [1, 0, 0, 1, 280, 150], width: 60, height: 10 },
+    ], "Abbildung 1");
+
+    expect(anchor).toMatchObject({ x: 280, y: 150 });
+  });
+
   it("builds a bounded crop box around the figure anchor", () => {
     const crop = deriveFigureCropBox({
       pageWidth: 595,
@@ -27,6 +36,18 @@ describe("pdf figure helpers", () => {
     expect(crop.height).toBeGreaterThan(100);
     expect(crop.x + crop.width).toBeLessThanOrEqual(595);
     expect(crop.y + crop.height).toBeLessThanOrEqual(842);
+  });
+
+  it("builds a broad crop that does not collapse into a narrow strip", () => {
+    const crop = deriveFigureCropBox({
+      pageWidth: 595,
+      pageHeight: 842,
+      anchor: { x: 300, y: 180, width: 60, height: 10 },
+      topic: "Analysis",
+    });
+
+    expect(crop.width / 595).toBeGreaterThan(0.55);
+    expect(crop.height / 842).toBeGreaterThan(0.45);
   });
 
   it("returns null without enough geometry for a crop box", () => {

@@ -92,25 +92,25 @@
     </div>
     <div class="auth-inline" id="authBar" style="display:none">
       <div class="auth-inline-copy">
-        <div class="auth-inline-label">Angemeldet</div>
+        <div class="auth-inline-label" id="authInlineLabel">Angemeldet</div>
         <div class="auth-inline-email" id="authUserEmail"></div>
       </div>
       <button id="authLogoutBtn" class="auth-inline-btn" onclick="window._authSignOut()">Logout</button>
     </div>
     <div class="diag-card">
-      <div class="diag-title">Diagnose</div>
+      <div class="diag-title" id="diagTitle">Diagnose</div>
       <div class="diag-copy" id="diagnosticSummary">Noch keine Leistungsdaten. Markiere Aufgaben als verstanden oder unsicher.</div>
     </div>
     <div class="diag-card">
-      <div class="diag-title">Lernplan</div>
+      <div class="diag-title" id="studyPlanTitle">Lernplan</div>
       <div class="diag-copy" id="studyPlanSummary">Sobald Daten vorliegen, erstellt Martha eine empfohlene Reihenfolge.</div>
     </div>
     <div class="diag-card">
-      <div class="diag-title">Fehlerprofil</div>
+      <div class="diag-title" id="errorProfileTitle">Fehlerprofil</div>
       <div class="diag-copy" id="errorProfileSummary">Noch kein Fehlerprofil vorhanden.</div>
     </div>
     <div class="diag-card">
-      <div class="diag-title">Wiederholung</div>
+      <div class="diag-title" id="repetitionTitle">Wiederholung</div>
       <div class="diag-copy" id="repetitionSummary">Martha zeigt hier die nächste fällige Wiederholung.</div>
     </div>
     <div class="fr" id="ff"></div>
@@ -141,8 +141,8 @@
       <div class="ei">👩‍🏫</div>
       <div class="et" id="welcome-title">Hallo, ich bin Martha!</div>
       <div class="ed" id="welcome-sub">Wähle links eine Aufgabe — ich erkläre dir Schritt für Schritt.</div>
-      <button class="btn-pri" style="margin-top:18px" onclick="window._openSimulationModal()">🧪 Prüfungssimulation starten</button>
-      <button class="btn-sec" style="margin-top:10px" onclick="window._openForecastModal()">📊 Wahrscheinliche Probeklausuren</button>
+      <button class="btn-pri" id="welcomeSimulationBtn" style="margin-top:18px" onclick="window._openSimulationModal()">🧪 Prüfungssimulation starten</button>
+      <button class="btn-sec" id="welcomeForecastBtn" style="margin-top:10px" onclick="window._openForecastModal()">📊 Wahrscheinliche Probeklausuren</button>
     </div>
 
     <div class="qa" id="qa" style="display:none">
@@ -347,6 +347,13 @@ const LANGUAGES = {
       greeting: "Hallo! \ud83d\udc4b Ich bin Martha, deine Mathe-Nachhilfelehrerin.\n\nSchau dir die Aufgabe oben an. Wie m\u00f6chtest du anfangen?\nDu kannst mir sagen, was du schon wei\u00dft, oder einen \ud83d\udca1 Tipp verlangen.",
       verified: "\u2713 Mathematisch verifiziert", math_error: "Mathematischer Fehler, erneuter Versuch...",
       all_failed: " Versuche ohne Erfolg.", all_failed_hint: "Versuche eine andere Aufgabe oder \u00e4ndere den Schwierigkeitsgrad.",
+      simulation: "🧪 Prüfungssimulation", simulation_start: "🧪 Prüfungssimulation starten",
+      forecast: "📊 Prüfungsprognose", forecast_open: "📊 Wahrscheinliche Probeklausuren",
+      operator_demand: "🧭 Was verlangt der Operator?", operator_full: "📝 Volle-BE Antwort",
+      understood: "✔ Verstanden", unsure: "✖ Unsicher", repeat_next: "🗂 Nächste Wiederholung",
+      uploaded_with_martha: "📚 Mit Martha öffnen", open_with_martha: "📚 Mit Martha öffnen",
+      logged_in: "Angemeldet", logout: "Logout",
+      diagnose: "Diagnose", study_plan: "Lernplan", error_profile: "Fehlerprofil", repetition: "Wiederholung",
     },
     system: `Du bist Martha, eine erfahrene Mathematik-Nachhilfelehrerin fuer das NRW Abitur.
 METHODE: Sokratisches Lehren. Frage zuerst was der Schueler versucht hat. Gib NIEMALS sofort die Loesung.
@@ -379,6 +386,13 @@ Aufgabe auf Deutsch.`,
       greeting: "Szia! \ud83d\udc4b Martha vagyok, a matektanárod.\n\nNézd meg a fenti feladatot. Hogyan szeretnéd elkezdeni?\nMondhatod, mit tudsz már, vagy kérhetsz \ud83d\udca1 tippet.",
       verified: "\u2713 Matematikailag ellenőrzött", math_error: "Matematikai hiba, újrapróbálás...",
       all_failed: " próbálkozás sikertelen.", all_failed_hint: "Próbálj másik feladatot, vagy változtass a nehézségen.",
+      simulation: "🧪 Érettségi szimuláció", simulation_start: "🧪 Érettségi szimuláció indítása",
+      forecast: "📊 Érettségi prognózis", forecast_open: "📊 Valószínű próbaérettségik",
+      operator_demand: "🧭 Mit kér az operátor?", operator_full: "📝 Teljes pontos válasz",
+      understood: "✔ Értem", unsure: "✖ Bizonytalan", repeat_next: "🗂 Következő ismétlés",
+      uploaded_with_martha: "📚 Betöltés Marthába", open_with_martha: "📚 Megnyitás Marthával",
+      logged_in: "Bejelentkezve", logout: "Kijelentkezés",
+      diagnose: "Diagnózis", study_plan: "Tanulási terv", error_profile: "Hibaprofil", repetition: "Ismétlés",
     },
     system: `Te Martha vagy, egy tapasztalt matematika-felkészítő tanár az NRW Abiturhoz.
 MÓDSZER: Szókratészi tanítás. Először kérdezd meg mit próbált. SOHA ne add meg rögtön a megoldást.
@@ -411,6 +425,13 @@ A feladatot magyarul fogalmazd meg.`,
       greeting: "Hello! \ud83d\udc4b I'm Martha, your math tutor.\n\nTake a look at the task above. How would you like to start?\nYou can tell me what you already know, or ask for a \ud83d\udca1 hint.",
       verified: "\u2713 Mathematically verified", math_error: "Math error, retrying...",
       all_failed: " attempts failed.", all_failed_hint: "Try a different task or change the difficulty level.",
+      simulation: "🧪 Exam simulation", simulation_start: "🧪 Start exam simulation",
+      forecast: "📊 Exam forecast", forecast_open: "📊 Likely mock exams",
+      operator_demand: "🧭 What does the operator require?", operator_full: "📝 Full-credit answer",
+      understood: "✔ Understood", unsure: "✖ Unsure", repeat_next: "🗂 Next review",
+      uploaded_with_martha: "📚 Open with Martha", open_with_martha: "📚 Open with Martha",
+      logged_in: "Signed in", logout: "Logout",
+      diagnose: "Diagnostics", study_plan: "Study plan", error_profile: "Error profile", repetition: "Review",
     },
     system: `You are Martha, an experienced mathematics tutor for the NRW Abitur exam.
 METHOD: Socratic teaching. First ask what the student tried. NEVER give the complete solution immediately.
@@ -484,11 +505,26 @@ function applyUILanguage() {
   set("btn-tip", ui.tip);              set("btn-step", ui.step);
   set("btn-solpath", ui.solpath);      set("btn-sol", ui.solution);
   set("btn-plot", ui.plot);            set("btn-practice", ui.practice);
+  set("btn-operator-demand", ui.operator_demand || "🧭 Was verlangt der Operator?");
+  set("btn-operator-full", ui.operator_full || "📝 Volle-BE Antwort");
+  set("btn-understood", ui.understood || "✔ Verstanden");
+  set("btn-unsure", ui.unsure || "✖ Unsicher");
+  set("btn-repeat-next", ui.repeat_next || "🗂 Nächste Wiederholung");
   set("btn-back", ui.back);
   set("diff-label", ui.difficulty);
   set("diff-easy", ui.easier);         set("diff-same", ui.similar);         set("diff-hard", ui.harder);
   set("practice-modal-title", ui.practice_modal_title);
   set("upload-modal-title", ui.upload_modal_title);
+  set("startSimulationBtn", ui.simulation || "🧪 Prüfungssimulation");
+  set("openForecastBtn", ui.forecast || "📊 Prüfungsprognose");
+  set("welcomeSimulationBtn", ui.simulation_start || "🧪 Prüfungssimulation starten");
+  set("welcomeForecastBtn", ui.forecast_open || "📊 Wahrscheinliche Probeklausuren");
+  set("authInlineLabel", ui.logged_in || "Angemeldet");
+  set("authLogoutBtn", ui.logout || "Logout");
+  set("diagTitle", ui.diagnose || "Diagnose");
+  set("studyPlanTitle", ui.study_plan || "Lernplan");
+  set("errorProfileTitle", ui.error_profile || "Fehlerprofil");
+  set("repetitionTitle", ui.repetition || "Wiederholung");
   set("uz-txt", ui.upload_hint);       set("uz-sub", ui.upload_sub);
   set("genBtnTxt", ui.generate);
   const lpb = document.getElementById("loadPracticeBtn"); if (lpb) lpb.textContent = ui.load_practice;
@@ -1913,6 +1949,9 @@ async function getTranslatedQuestion(i) {
 }
 
 function sel(i) {
+  const previousTask = getActiveTask();
+  const previousKey = getActiveHistoryKey();
+  const currentPrefix = String(state.chatContextKey || "task").split(":")[0] || "task";
   state.selectedIdx = i;
   if (!state.selectedBlockId && window.MarthaTaskNav) {
     state.selectedBlockId = window.MarthaTaskNav.findBlockIdByTaskIndex(state.taskIndex, i);
@@ -1920,6 +1959,10 @@ function sel(i) {
   }
   const t = getActiveTask(), sr = (t && t.source) || {};
   if (!t) return;
+  const nextKey = getActiveHistoryKey();
+  if (!previousTask || previousTask.task_id !== t.task_id || previousKey !== nextKey) {
+    startNewChatContext(currentPrefix);
+  }
   document.getElementById('cht').textContent = t.task_id || 'Aufgabe';
   const metaBits = buildTaskMetaBits(t);
   document.getElementById('chs').textContent = metaBits.join(' \u00b7 ') + (t.points ? ' \u00b7 ' + t.points + ' BE' : '');
