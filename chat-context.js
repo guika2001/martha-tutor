@@ -1,13 +1,13 @@
 (function (root) {
-  function buildChatHistoryKey({ chatContextKey, selectedBlockId, selectedIdx }) {
-    const baseKey = selectedBlockId || String(selectedIdx);
+  function buildChatHistoryKey({ chatContextKey, selectedBlockId, selectedIdx, useBlockScope }) {
+    const baseKey = useBlockScope ? (selectedBlockId || String(selectedIdx)) : String(selectedIdx);
     return [chatContextKey || "base", baseKey].join("::");
   }
 
-  function buildTaskRenderKey({ chatContextKey, selectedBlockId, taskId, taskIndex, lang, questionSource }) {
+  function buildTaskRenderKey({ chatContextKey, selectedBlockId, taskId, taskIndex, lang, questionSource, useBlockScope }) {
     return [
       chatContextKey || "base",
-      selectedBlockId || taskId || taskIndex,
+      useBlockScope ? (selectedBlockId || taskId || taskIndex) : (taskId || taskIndex),
       lang || "de",
       questionSource || "",
     ].join("::");

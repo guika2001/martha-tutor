@@ -5,11 +5,18 @@ const {
 } = require("../chat-context.js");
 
 describe("chat context isolation", () => {
-  it("namespaces history keys by chat context", () => {
+  it("namespaces task history keys by chat context", () => {
     expect(buildChatHistoryKey({ chatContextKey: "forecast:1", selectedBlockId: "GK::A", selectedIdx: 3 }))
-      .toBe("forecast:1::GK::A");
+      .toBe("forecast:1::3");
     expect(buildChatHistoryKey({ chatContextKey: "simulation:2", selectedBlockId: "", selectedIdx: 3 }))
       .toBe("simulation:2::3");
+  });
+
+  it("uses block-scoped history keys for synthetic combined tasks", () => {
+    expect(buildChatHistoryKey({ chatContextKey: "forecast:1", selectedBlockId: "GK::A", selectedIdx: 3 }))
+      .toBe("forecast:1::3");
+    expect(buildChatHistoryKey({ chatContextKey: "forecast:1", selectedBlockId: "GK::A", selectedIdx: 3, useBlockScope: true }))
+      .toBe("forecast:1::GK::A");
   });
 
   it("builds task render keys that change with chat context", () => {

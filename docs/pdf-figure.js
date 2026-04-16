@@ -161,14 +161,7 @@
       const pdf = await openPdf(primary.href);
       const page = await pdf.getPage(targetPage);
       const textContent = await page.getTextContent();
-      const anchor = findFigureAnchor(textContent.items, task && task.figureLabel);
-      let cropBox = deriveFigureCropBox({
-        pageWidth: page.view[2],
-        pageHeight: page.view[3],
-        anchor,
-        topic: task && task.topic,
-      });
-      if (cropBox && validation.score < 2) cropBox = null;
+      const cropBox = null;
       await renderPageToCanvas(primary.href, targetPage, canvas, cropBox);
       container.dataset.status = validation.ok
         ? `PDF-Quelle validiert · Seite ${targetPage}${cropBox ? " · Ausschnitt" : ""}`

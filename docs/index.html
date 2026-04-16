@@ -583,13 +583,16 @@ function getActiveTask() {
 }
 
 function getActiveHistoryKey() {
+  const activeTask = getActiveTask();
+  const useBlockScope = Boolean(activeTask && activeTask.isSyntheticBlock && state.selectedBlockId);
   return window.MarthaChatContext && typeof window.MarthaChatContext.buildChatHistoryKey === "function"
     ? window.MarthaChatContext.buildChatHistoryKey({
         chatContextKey: state.chatContextKey,
         selectedBlockId: state.selectedBlockId,
         selectedIdx: state.selectedIdx,
+        useBlockScope,
       })
-    : (state.selectedBlockId || String(state.selectedIdx));
+    : (useBlockScope ? (state.selectedBlockId || String(state.selectedIdx)) : String(state.selectedIdx));
 }
 
 function startNewChatContext(prefix) {
@@ -2035,10 +2038,11 @@ async function renderChat(i) {
         taskIndex: i,
         lang: _currentLang,
         questionSource,
+        useBlockScope: Boolean(t && t.isSyntheticBlock && state.selectedBlockId),
       })
     : [
         state.chatContextKey,
-        state.selectedBlockId || t.task_id || i,
+        (t && t.isSyntheticBlock && state.selectedBlockId) ? state.selectedBlockId : (t.task_id || i),
         _currentLang,
         questionSource,
       ].join('::');
