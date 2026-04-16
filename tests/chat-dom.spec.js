@@ -26,4 +26,22 @@ describe("chat dom hosts", () => {
     expect(messagesHost).toBeTruthy();
     expect(cms.querySelector(".mg")).toBeNull();
   });
+
+  it("rebuilds the container when stray nodes exist outside the two hosts", () => {
+    document.body.innerHTML = `
+      <div id="cms">
+        <div class="task-context-host"></div>
+        <div class="chat-history-host"></div>
+        <div class="mg a">stale message</div>
+      </div>
+    `;
+    const cms = document.getElementById("cms");
+
+    const { taskHost, messagesHost } = getChatHosts(cms, document);
+
+    expect(taskHost).toBeTruthy();
+    expect(messagesHost).toBeTruthy();
+    expect(cms.children).toHaveLength(2);
+    expect(cms.querySelector(".mg")).toBeNull();
+  });
 });

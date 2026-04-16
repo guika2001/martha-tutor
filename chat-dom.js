@@ -16,7 +16,13 @@
     if (!container) return { taskHost: null, messagesHost: null };
     let taskHost = container.querySelector(".task-context-host");
     let messagesHost = container.querySelector(".chat-history-host");
-    if (!taskHost || !messagesHost) {
+    const polluted =
+      container.children.length !== 2 ||
+      !taskHost ||
+      !messagesHost ||
+      container.firstElementChild !== taskHost ||
+      container.lastElementChild !== messagesHost;
+    if (polluted) {
       return ensureChatHosts(container, doc);
     }
     return { taskHost, messagesHost };
