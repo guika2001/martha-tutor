@@ -48,10 +48,20 @@ describe("task navigator normalization", () => {
     expect(synthetic.isSyntheticBlock).toBe(true);
     expect(synthetic.task_id).not.toContain("Aufgabe a)");
     expect(synthetic.question).toContain("Teil 1");
+    expect(synthetic.examPart).toBe("2. Prüfungsteil");
+    expect(synthetic.toolType).toBe("mit Hilfsmitteln");
   });
 
   it("removes generic NRW lead-in boilerplate", () => {
     const cleaned = stripTaskLeadIn("Löse folgende Aufgabe aus dem NRW Abitur 2025-Beispiel (Mathematik, GK):\n\nEine Funktion f ist gegeben.");
     expect(cleaned).toBe("Eine Funktion f ist gegeben.");
+  });
+
+  it("offers exam-part and task-type filters", () => {
+    const index = buildTaskIndex(sampleTasks);
+    const topicView = getVisibleItems(index, { level: "LK", topic: "", year: "2025-Beispiel", examPart: "", taskType: "", toolType: "" });
+    expect(topicView.filters.examParts.map((item) => item.id)).toContain("2. Prüfungsteil");
+    expect(topicView.filters.taskTypes.map((item) => item.id)).toContain("Prüfungsaufgabe");
+    expect(topicView.filters.toolTypes.map((item) => item.id)).toContain("mit Hilfsmitteln");
   });
 });

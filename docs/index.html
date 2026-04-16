@@ -410,6 +410,9 @@ const state = {
   taskIndex: null,
   currentYear: "",
   currentTopic: "",
+  currentExamPart: "",
+  currentTaskType: "",
+  currentToolType: "",
   selectedBlockId: "",
   selectedTaskRef: null,
 };
@@ -788,6 +791,9 @@ function buildContext(task) {
     `PUNKTE: ${task.points || "?"} BE`,
     `KURS: ${(task.source || {}).level || "?"}`,
     `JAHR/FILTER: ${(task.source || {}).year || "?"}`,
+    `PRÜFUNGSTEIL: ${task.examPart || "?"}`,
+    `AUFGABENTYP: ${task.taskType || "?"}`,
+    `WERKZEUG: ${task.toolType || "?"}`,
     `\nAUFGABENTEXT:\n${question}`,
   ];
   if (task.expected_answer) {
@@ -933,7 +939,7 @@ function renderFilters() {
   const path = [];
   if (state.levelFilter !== "all") path.push(state.levelFilter);
   if (state.currentTopic) path.push(state.currentTopic);
-  const years = state.filtered && state.filtered.filters ? state.filtered.filters.years || [] : [];
+  const filters = state.filtered && state.filtered.filters ? state.filtered.filters : {};
   el.innerHTML = "";
   const back = document.createElement("button");
   back.className = "fb";
@@ -945,20 +951,31 @@ function renderFilters() {
   label.className = "nav-path";
   label.textContent = path.length ? path.join(" · ") : "GK/LK → Thema → Aufgabenblock";
   el.appendChild(label);
-  if (years.length > 1) {
-    const yearRow = document.createElement("div");
-    yearRow.className = "fr";
-    yearRow.style.padding = "8px 0 0";
-    years.forEach((year) => {
+
+  function appendFilterRow(items, selectedValue, onSelect, title) {
+    if (!items || items.length <= 1) return;
+    const row = document.createElement("div");
+    row.className = "fr";
+    row.style.padding = "8px 0 0";
+    const marker = document.createElement("div");
+    marker.className = "nav-filter-label";
+    marker.textContent = title;
+    row.appendChild(marker);
+    items.forEach((item) => {
       const btn = document.createElement("button");
-      btn.className = "fb" + ((state.currentYear || "") === year.id ? " on" : "");
-      btn.textContent = year.label;
-      btn.title = year.count + " Aufgaben";
-      btn.onclick = () => window._setYearFilter(year.id);
-      yearRow.appendChild(btn);
+      btn.className = "fb" + (selectedValue === item.id ? " on" : "");
+      btn.textContent = item.label;
+      btn.title = item.count + " Aufgaben";
+      btn.onclick = () => onSelect(item.id);
+      row.appendChild(btn);
     });
-    el.appendChild(yearRow);
+    el.appendChild(row);
   }
+
+  appendFilterRow(filters.years, state.currentYear || "", window._setYearFilter, "Jahr");
+  appendFilterRow(filters.examParts, state.currentExamPart || "", window._setExamPartFilter, "Prüfungsteil");
+  appendFilterRow(filters.taskTypes, state.currentTaskType || "", window._setTaskTypeFilter, "Aufgabentyp");
+  appendFilterRow(filters.toolTypes, state.currentToolType || "", window._setToolTypeFilter, "Werkzeug");
 }
 
 function applyFilters() {
@@ -971,6 +988,9 @@ function applyFilters() {
     level: state.levelFilter === "all" ? "" : state.levelFilter,
     topic: state.currentTopic,
     year: state.currentYear,
+    examPart: state.currentExamPart,
+    taskType: state.currentTaskType,
+    toolType: state.currentToolType,
   });
   renderFilters();
   renderTaskList();
@@ -1016,7 +1036,7 @@ function renderTaskList() {
     meta.className = "m";
     if (view.kind === "level") meta.textContent = item.count + " Aufgaben";
     else if (view.kind === "topic") meta.textContent = item.count + " Aufgaben";
-    else meta.textContent = item.year + " · " + item.taskIndexes.length + " Teilaufgaben";
+    else meta.textContent = item.year + " · " + item.examPart + " · " + item.taskType;
     title.appendChild(name);
     title.appendChild(meta);
     row.appendChild(icon);
@@ -1045,6 +1065,9 @@ window._sL = (level, btn) => {
   state.levelFilter = level;
   state.currentYear = "";
   state.currentTopic = "";
+  state.currentExamPart = "";
+  state.currentTaskType = "";
+  state.currentToolType = "";
   state.selectedBlockId = "";
   state.selectedTaskRef = null;
   const filterRow = document.getElementById("legacyLevelFilters");
@@ -1061,6 +1084,9 @@ window._setYearFilter = (year) => {
   state.selectedTaskRef = null;
   applyFilters();
 };
+window._setExamPartFilter = (value) => { state.currentExamPart = value; state.selectedBlockId = ""; state.selectedTaskRef = null; applyFilters(); };
+window._setTaskTypeFilter = (value) => { state.currentTaskType = value; state.selectedBlockId = ""; state.selectedTaskRef = null; applyFilters(); };
+window._setToolTypeFilter = (value) => { state.currentToolType = value; state.selectedBlockId = ""; state.selectedTaskRef = null; applyFilters(); };
 window._navTopic = (topic) => { state.currentTopic = topic; state.selectedBlockId = ""; state.selectedTaskRef = null; applyFilters(); };
 window._navBack = () => {
   if (state.currentTopic) state.currentTopic = "";
@@ -1138,7 +1164,8 @@ function sel(i) {
   const t = getActiveTask(), sr = (t && t.source) || {};
   if (!t) return;
   document.getElementById('cht').textContent = t.task_id || 'Aufgabe';
-  document.getElementById('chs').textContent = (t.topic||'') + ' \u00b7 ' + (sr.level||'') + (sr.year ? ' \u00b7 ' + sr.year : '') + (t.points ? ' \u00b7 ' + t.points + ' BE' : '');
+  const metaBits = [t.topic || '', sr.level || '', sr.year || '', t.examPart || '', t.taskType || '', t.toolType || ''].filter(Boolean);
+  document.getElementById('chs').textContent = metaBits.join(' \u00b7 ') + (t.points ? ' \u00b7 ' + t.points + ' BE' : '');
   document.getElementById('cin').style.display = 'flex';
   document.getElementById('qa').style.display = 'flex';
   document.getElementById('app').classList.add('co');
