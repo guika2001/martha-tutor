@@ -1,24 +1,75 @@
 (function (root) {
-  function getValidatorSystemPrompt() {
+  function getValidatorPack(langCode = "de") {
+    if (langCode === "hu") {
+      return {
+        system: "Te egy szigorú matematikai validátor vagy NRW-Abitur megoldásokhoz.",
+        onlyJson: "Csak JSON-nal válaszolj.",
+        schema: 'Schema: {"valid":boolean,"confidence":number,"issues":[{"code":string,"message":string}],"corrected_answer":string,"should_repair":boolean}',
+        checks: "Ellenőrizd a szakmai helyességet, az operátor követését, a feladatadatok használatát és a mintamegoldáshoz való illeszkedést, ha van.",
+        prompt: "Ellenőrizd ezt a megoldást.",
+        context: "FELADATKONTEXTUS:",
+        draft: "MEGOLDÁSTERVEZET:",
+        json: "Csak JSON-t adj vissza.",
+      };
+    }
+    if (langCode === "en") {
+      return {
+        system: "You are a strict mathematics validator for NRW Abitur solutions.",
+        onlyJson: "Reply only as JSON.",
+        schema: 'Schema: {"valid":boolean,"confidence":number,"issues":[{"code":string,"message":string}],"corrected_answer":string,"should_repair":boolean}',
+        checks: "Check mathematical correctness, operator fidelity, use of task data, and match to the reference solution when available.",
+        prompt: "Validate this solution.",
+        context: "TASK CONTEXT:",
+        draft: "SOLUTION DRAFT:",
+        json: "Return JSON only.",
+      };
+    }
+    if (langCode === "es") {
+      return {
+        system: "Eres un validador estricto de matemáticas para soluciones del Abitur NRW.",
+        onlyJson: "Responde solo en JSON.",
+        schema: 'Schema: {"valid":boolean,"confidence":number,"issues":[{"code":string,"message":string}],"corrected_answer":string,"should_repair":boolean}',
+        checks: "Comprueba la corrección matemática, la fidelidad al operador, el uso de los datos del ejercicio y el ajuste a la solución modelo cuando exista.",
+        prompt: "Valida esta solución.",
+        context: "CONTEXTO DEL EJERCICIO:",
+        draft: "BORRADOR DE SOLUCIÓN:",
+        json: "Devuelve solo JSON.",
+      };
+    }
+    return {
+      system: "Du bist ein strenger Mathematik-Validator fuer NRW-Abiturloesungen.",
+      onlyJson: "Antworte nur als JSON.",
+      schema: 'Schema: {"valid":boolean,"confidence":number,"issues":[{"code":string,"message":string}],"corrected_answer":string,"should_repair":boolean}',
+      checks: "Pruefe fachliche Richtigkeit, Operator-Treue, Nutzung der Aufgabendaten und Passung zur Musterloesung wenn vorhanden.",
+      prompt: "Pruefe diese Loesung.",
+      context: "AUFGABENKONTEXT:",
+      draft: "LOESUNGSENTWURF:",
+      json: "Gib nur JSON zurueck.",
+    };
+  }
+
+  function getValidatorSystemPrompt(langCode = "de") {
+    const pack = getValidatorPack(langCode);
     return [
-      "Du bist ein strenger Mathematik-Validator fuer NRW-Abiturloesungen.",
-      "Antworte nur als JSON.",
-      'Schema: {"valid":boolean,"confidence":number,"issues":[{"code":string,"message":string}],"corrected_answer":string,"should_repair":boolean}',
-      "Pruefe fachliche Richtigkeit, Operator-Treue, Nutzung der Aufgabendaten und Passung zur Musterloesung wenn vorhanden.",
+      pack.system,
+      pack.onlyJson,
+      pack.schema,
+      pack.checks,
     ].join(" ");
   }
 
-  function buildValidationPrompt({ taskContext, draft }) {
+  function buildValidationPrompt({ taskContext, draft, langCode = "de" }) {
+    const pack = getValidatorPack(langCode);
     return [
-      "Pruefe diese Loesung.",
+      pack.prompt,
       "",
-      "AUFGABENKONTEXT:",
+      pack.context,
       taskContext || "",
       "",
-      "LOESUNGSENTWURF:",
+      pack.draft,
       draft || "",
       "",
-      "Gib nur JSON zurueck.",
+      pack.json,
     ].join("\n");
   }
 
@@ -50,7 +101,7 @@
     }
   }
 
-  const api = { getValidatorSystemPrompt, buildValidationPrompt, parseValidationResult };
+  const api = { getValidatorPack, getValidatorSystemPrompt, buildValidationPrompt, parseValidationResult };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   if (root) root.MarthaSolutionValidator = api;
 })(typeof window !== "undefined" ? window : globalThis);

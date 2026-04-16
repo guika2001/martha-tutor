@@ -467,8 +467,8 @@ function setLanguage(code) {
   _currentLang = code;
   try { localStorage.setItem("martha_lang", code); } catch(_) {}
   applyUILanguage();
-  if (typeof state !== "undefined" && state.selectedIdx >= 0) {
-    state.history[state.selectedIdx] = [];
+  if (typeof state !== "undefined" && state.selectedIdx >= 0 && typeof getActiveHistoryKey === "function") {
+    state.history[getActiveHistoryKey()] = [];
     if (typeof renderChat === "function") renderChat(state.selectedIdx);
   }
 }
@@ -1483,6 +1483,7 @@ async function generateValidatedTeacherReply({ task, messages, onStatus }) {
   const latestUserMessage = [...(messages || [])].reverse().find((entry) => entry.role === "user")?.content || "";
   const taskContext = buildContext(task);
   const conversation = buildConversationSnippet(messages);
+  const langCode = _currentLang || "de";
   const styleApi = window.MarthaSolutionStyle || {};
   const guardApi = window.MarthaSolutionGuards || {};
   const validatorApi = window.MarthaSolutionValidator || {};
@@ -1491,9 +1492,9 @@ async function generateValidatedTeacherReply({ task, messages, onStatus }) {
 
   updateStatus("Martha erstellt eine saubere Lehrerloesung ...");
   let candidate = await callGroq({
-    systemPrompt: styleApi.buildTeacherSystemPrompt ? styleApi.buildTeacherSystemPrompt(task) : getSystemPrompt(),
+    systemPrompt: styleApi.buildTeacherSystemPrompt ? styleApi.buildTeacherSystemPrompt(task, langCode) : getSystemPrompt(),
     userPrompt: styleApi.buildDraftPrompt
-      ? styleApi.buildDraftPrompt({ taskContext, conversation, latestUserMessage })
+      ? styleApi.buildDraftPrompt({ taskContext, conversation, latestUserMessage, langCode })
       : latestUserMessage,
     temperature: 0.2,
     maxTokens: 1400,
@@ -1503,9 +1504,9 @@ async function generateValidatedTeacherReply({ task, messages, onStatus }) {
 
   updateStatus("Martha validiert die Loesung ...");
   const validationRaw = await callGroq({
-    systemPrompt: validatorApi.getValidatorSystemPrompt ? validatorApi.getValidatorSystemPrompt() : "Antworte nur als JSON.",
+    systemPrompt: validatorApi.getValidatorSystemPrompt ? validatorApi.getValidatorSystemPrompt(langCode) : "Antworte nur als JSON.",
     userPrompt: validatorApi.buildValidationPrompt
-      ? validatorApi.buildValidationPrompt({ taskContext, draft: candidate })
+      ? validatorApi.buildValidationPrompt({ taskContext, draft: candidate, langCode })
       : candidate,
     temperature: 0,
     maxTokens: 700,
@@ -1521,12 +1522,13 @@ async function generateValidatedTeacherReply({ task, messages, onStatus }) {
       ...(validation.issues || []),
     ];
     const repaired = await callGroq({
-      systemPrompt: styleApi.buildTeacherSystemPrompt ? styleApi.buildTeacherSystemPrompt(task) : getSystemPrompt(),
+      systemPrompt: styleApi.buildTeacherSystemPrompt ? styleApi.buildTeacherSystemPrompt(task, langCode) : getSystemPrompt(),
       userPrompt: styleApi.buildRepairPrompt({
         taskContext,
         latestUserMessage,
         draft: validation.correctedAnswer || candidate,
         issues: repairIssues,
+        langCode,
       }),
       temperature: 0.15,
       maxTokens: 1400,
@@ -1547,12 +1549,33 @@ async function generateValidatedTeacherReply({ task, messages, onStatus }) {
 
   if (!localCheck.ok) {
     const issueLabel = (localCheck.issues || []).map((issue) => issue.message).join(" ");
-    return [
-      "Ich bleibe hier bewusst vorsichtig, damit keine falsche Mathe-Aussage stehen bleibt.",
-      "Sicher ist bereits:",
-      validation.correctedAnswer || candidate,
-      issueLabel ? `Noch offen zur Nachpruefung: ${issueLabel}` : "",
-    ].filter(Boolean).join("\n\n");
+    const fallbackByLang = {
+      hu: [
+        "Itt tudatosan óvatos maradok, hogy ne maradjon bent hibás matematikai állítás.",
+        "Ami már biztos:",
+        validation.correctedAnswer || candidate,
+        issueLabel ? `Még ellenőrizendő: ${issueLabel}` : "",
+      ],
+      en: [
+        "I am being intentionally careful here so no false math statement remains.",
+        "What is already certain:",
+        validation.correctedAnswer || candidate,
+        issueLabel ? `Still needs verification: ${issueLabel}` : "",
+      ],
+      es: [
+        "Aquí me mantengo deliberadamente prudente para no dejar una afirmación matemática falsa.",
+        "Lo que ya es seguro:",
+        validation.correctedAnswer || candidate,
+        issueLabel ? `Aún requiere verificación: ${issueLabel}` : "",
+      ],
+      de: [
+        "Ich bleibe hier bewusst vorsichtig, damit keine falsche Mathe-Aussage stehen bleibt.",
+        "Sicher ist bereits:",
+        validation.correctedAnswer || candidate,
+        issueLabel ? `Noch offen zur Nachpruefung: ${issueLabel}` : "",
+      ],
+    };
+    return (fallbackByLang[langCode] || fallbackByLang.de).filter(Boolean).join("\n\n");
   }
 
   return candidate;
@@ -1624,6 +1647,7 @@ async function init() {
 function injectAndSelect(task) {
   state.tasks.unshift(task);
   if (state.selectedIdx >= 0) state.selectedIdx++;
+  if (typeof startNewChatContext === "function") startNewChatContext("upload");
   refreshTaskIndex();
   state.selectedTaskRef = null;
   state.selectedBlockId = "";

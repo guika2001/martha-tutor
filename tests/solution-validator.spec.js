@@ -29,4 +29,16 @@ describe("solution validator", () => {
     expect(prompt).toContain("AUFGABENTEXT: Test");
     expect(prompt).toContain("Hier ist eine Lösung.");
   });
+
+  it("builds a localized Hungarian validator prompt", () => {
+    const prompt = buildValidationPrompt({
+      taskContext: "FELADAT",
+      draft: "Megoldás",
+      langCode: "hu",
+    });
+
+    expect(getValidatorSystemPrompt("hu")).toContain("validátor");
+    expect(prompt).toContain("FELADATKONTEXTUS");
+    expect(prompt).toContain("Megoldás");
+  });
 });
