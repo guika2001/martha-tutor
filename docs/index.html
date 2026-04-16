@@ -23,6 +23,7 @@
 <script src="solution-guards.js"></script>
 <script src="solution-validator.js"></script>
 <script src="solution-style.js"></script>
+<script src="quick-actions.js"></script>
 <script src="operatoren.js"></script>
 <script src="tool-mode.js"></script>
 <script src="figure-source.js"></script>
@@ -146,10 +147,10 @@
     </div>
 
     <div class="qa" id="qa" style="display:none">
-      <button class="qb" id="btn-tip" onclick="window._quickSend(getUI().tip)">💡 Tipp</button>
-      <button class="qb" id="btn-step" onclick="window._quickSend(getUI().step)">👣 Erster Schritt</button>
-      <button class="qb" id="btn-solpath" onclick="window._quickSend(getUI().solpath)">🧠 Lösungsweg</button>
-      <button class="qb" id="btn-sol" onclick="window._quickSend(getUI().solution)">✅ Lösung</button>
+      <button class="qb" id="btn-tip" onclick="window._quickAction('tip')">💡 Tipp</button>
+      <button class="qb" id="btn-step" onclick="window._quickAction('step')">👣 Erster Schritt</button>
+      <button class="qb" id="btn-solpath" onclick="window._quickAction('solpath')">🧠 Lösungsweg</button>
+      <button class="qb" id="btn-sol" onclick="window._quickAction('solution')">✅ Lösung</button>
       <button class="qb" id="btn-operator-demand" onclick="window._operatorDemandHelp()" style="display:none">🧭 Was verlangt der Operator?</button>
       <button class="qb" id="btn-operator-full" onclick="window._operatorFullCreditHelp()" style="display:none">📝 Volle-BE Antwort</button>
       <button class="qb" id="btn-plot" onclick="window._plotFromTask()" style="display:none">📈 Funktion zeichnen</button>
@@ -1897,6 +1898,7 @@ window._navBack = () => {
 window._selectBlock = (blockId) => {
   const block = getBlockById(blockId);
   if (!block) return;
+  startNewChatContext("block");
   state.selectedBlockId = blockId;
   state.selectedTaskRef = window.MarthaTaskNav && window.MarthaTaskNav.buildCombinedTask
     ? window.MarthaTaskNav.buildCombinedTask(block)
@@ -2124,6 +2126,12 @@ function plotFromTask() {
 }
 
 function quickSend(text) { document.getElementById('mi').value = text; sendMessage(); }
+function quickAction(action) {
+  const prompt = window.MarthaQuickActions && typeof window.MarthaQuickActions.buildQuickActionPrompt === "function"
+    ? window.MarthaQuickActions.buildQuickActionPrompt(action, _currentLang)
+    : action;
+  quickSend(prompt);
+}
 
 function operatorDemandHelp() {
   const task = getActiveTask();
@@ -2196,6 +2204,7 @@ window._sel = sel;
 window._goBack = goBack;
 window._plotFromTask = plotFromTask;
 window._quickSend = quickSend;
+window._quickAction = quickAction;
 window._sendMessage = sendMessage;
 window._operatorDemandHelp = operatorDemandHelp;
 window._operatorFullCreditHelp = operatorFullCreditHelp;
