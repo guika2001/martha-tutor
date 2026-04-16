@@ -717,13 +717,45 @@ function describeRepetitionReason(reason) {
   return "Wiederholung";
 }
 
+function findFirstTaskIndexForSelection(selection) {
+  if (!state.taskIndex || !selection || !selection.topic) return null;
+  const wantedLevel = selection.level && selection.level !== "all" ? selection.level : "";
+  const levels = state.taskIndex.levels || [];
+  const matchingLevels = wantedLevel
+    ? levels.filter((level) => level.id === wantedLevel)
+    : levels;
+
+  for (const level of matchingLevels) {
+    const topicNode = (level.topics || []).find((topic) => topic.id === selection.topic);
+    if (!topicNode) continue;
+    const block = (topicNode.blocks || []).find(Boolean);
+    if (block && Array.isArray(block.taskIndexes) && typeof block.taskIndexes[0] === "number") {
+      return block.taskIndexes[0];
+    }
+  }
+
+  const fallbackTask = (state.tasks || []).find((task) => {
+    const taskLevel = ((task.source || {}).level) || "";
+    return task && task.topic === selection.topic && (!wantedLevel || taskLevel === wantedLevel);
+  });
+  return fallbackTask ? state.tasks.indexOf(fallbackTask) : null;
+}
+
+function showRepetitionFeedback(message) {
+  const repetitionEl = document.getElementById("repetitionSummary");
+  if (repetitionEl && message) repetitionEl.textContent = message;
+}
+
 function openNextRepetitionTask() {
   const events = loadPerformanceEvents();
   const queue = getRepetitionQueue(events, buildErrorProfileFromEvents(events));
   const selection = window.MarthaRepetition && typeof window.MarthaRepetition.buildNextRepetitionSelection === "function"
     ? window.MarthaRepetition.buildNextRepetitionSelection({ queue, events })
     : null;
-  if (!selection) return;
+  if (!selection) {
+    showRepetitionFeedback("Noch keine Wiederholung geplant. Markiere Aufgaben zuerst als verstanden oder unsicher.");
+    return;
+  }
 
   clearForecastState();
   state.levelFilter = selection.level || "all";
@@ -736,8 +768,13 @@ function openNextRepetitionTask() {
   state.selectedTaskRef = null;
   applyFilters();
 
-  const firstTaskIndex = state.filtered?.items?.[0]?.taskIndexes?.[0];
-  if (typeof firstTaskIndex === "number") sel(firstTaskIndex);
+  const firstTaskIndex = findFirstTaskIndexForSelection(selection);
+  if (typeof firstTaskIndex === "number") {
+    sel(firstTaskIndex);
+    return;
+  }
+
+  showRepetitionFeedback("Für die geplante Wiederholung wurde kein passender Aufgabenblock gefunden.");
 }
 
 function renderDiagnosticCards() {
