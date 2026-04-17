@@ -19,6 +19,7 @@
 <script src="error-profile.js"></script>
 <script src="repetition.js"></script>
 <script src="chat-dom.js"></script>
+<script src="chat-lifecycle.js"></script>
 <script src="analysis-guards.js"></script>
 <script src="stochastik-guards.js"></script>
 <script src="vector-guards.js"></script>
@@ -655,6 +656,7 @@ const state = {
   selectedForecastVariantId: "",
   loadedForecastVariant: null,
   chatContextKey: "base",
+  chatEpoch: 0,
   explainerMode: false,
 };
 
@@ -792,6 +794,18 @@ function startNewChatContext(prefix) {
   state.chatContextKey = window.MarthaChatContext && typeof window.MarthaChatContext.createChatContextKey === "function"
     ? window.MarthaChatContext.createChatContextKey(prefix)
     : [prefix || "base", Date.now()].join(":");
+}
+
+function invalidatePendingChat(reason = "context_switch") {
+  if (window.MarthaChatLifecycle && typeof window.MarthaChatLifecycle.invalidateChatEpoch === "function") {
+    window.MarthaChatLifecycle.invalidateChatEpoch(state);
+  } else {
+    state.chatEpoch = Number(state.chatEpoch || 0) + 1;
+  }
+  state.streaming = false;
+  const submitBtn = document.getElementById('sbt');
+  if (submitBtn) submitBtn.disabled = false;
+  logEvent("info", "chat", "pending_chat_invalidated", { reason });
 }
 
 function refreshTaskIndex() {
@@ -1968,6 +1982,7 @@ async function init() {
 function injectAndSelect(task) {
   state.tasks.unshift(task);
   if (state.selectedIdx >= 0) state.selectedIdx++;
+  invalidatePendingChat("upload_task_selected");
   if (typeof startNewChatContext === "function") startNewChatContext("upload");
   refreshTaskIndex();
   state.selectedTaskRef = null;
@@ -2195,6 +2210,7 @@ window._selectBlock = (blockId) => {
     ? window.MarthaTaskNav.buildCombinedTask(block)
     : null;
   state.selectedIdx = block.representativeIndex;
+  invalidatePendingChat("block_selected");
   startNewChatContext("block");
   state.history[getActiveHistoryKey()] = [];
   const cms = document.getElementById('cms');
@@ -2267,6 +2283,7 @@ function sel(i) {
   if (!t) return;
   const nextKey = getActiveHistoryKey();
   if (!previousTask || previousTask.task_id !== t.task_id || previousKey !== nextKey) {
+    invalidatePendingChat("task_selected");
     startNewChatContext(currentPrefix);
   }
   document.getElementById('cht').textContent = t.task_id || 'Aufgabe';
@@ -2528,6 +2545,9 @@ async function sendMessage() {
     });
   }
   const el = document.getElementById('cms');
+  const requestToken = window.MarthaChatLifecycle && typeof window.MarthaChatLifecycle.createRequestToken === "function"
+    ? window.MarthaChatLifecycle.createRequestToken(state)
+    : { epoch: Number(state.chatEpoch || 0), contextKey: String(state.chatContextKey || "base") };
   const hosts = window.MarthaChatDom && typeof window.MarthaChatDom.getChatHosts === "function"
     ? window.MarthaChatDom.getChatHosts(el, document)
     : { taskHost: null, messagesHost: el };
@@ -2558,6 +2578,20 @@ async function sendMessage() {
       error: String(ex && ex.message || ex),
     });
     full = full || 'Verbindungsfehler: ' + ex.message;
+  }
+  const requestStillCurrent = window.MarthaChatLifecycle && typeof window.MarthaChatLifecycle.isRequestTokenCurrent === "function"
+    ? window.MarthaChatLifecycle.isRequestTokenCurrent(state, requestToken)
+    : (Number(state.chatEpoch || 0) === Number(requestToken.epoch || 0)
+      && String(state.chatContextKey || "base") === String(requestToken.contextKey || "base"));
+  if (!requestStillCurrent) {
+    logEvent("info", "chat", "assistant_reply_discarded", {
+      reason: "stale_task_context",
+      requestContext: requestToken.contextKey,
+      currentContext: state.chatContextKey || "base",
+    });
+    state.streaming = false;
+    document.getElementById('sbt').disabled = false;
+    return;
   }
   if (full) {
     state.history[historyKey].push({role:'assistant', content:full});

@@ -1,7 +1,7 @@
 {
-  "name": "martha-4-0",
-  "version": "1.0.0",
-  "description": "Martha 4.0 working directory with layered testing for the NRW Abitur prep app.",
+  "name": "martha-tutor",
+  "version": "4.0.0",
+  "description": "Martha Tutor runtime 4.0 for NRW Mathematik-Abitur prep, served from the 3.0 git workspace.",
   "main": "plot.js",
   "directories": {
     "test": "tests"
@@ -13,7 +13,10 @@
     "test:coverage": "vitest run --config vitest.coverage.config.mjs --coverage",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "test:e2e:smoke": "playwright test tests/e2e/smoke.spec.js"
+    "test:e2e:smoke": "playwright test tests/e2e/smoke.spec.js",
+    "sync:docs": "node scripts/sync-docs.mjs",
+    "verify": "npm run test && npm run test:e2e:smoke",
+    "clean:artifacts": "rm -rf coverage playwright-report test-results"
   },
   "repository": {
     "type": "git",
