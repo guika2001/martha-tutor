@@ -20,7 +20,28 @@
     return summary;
   }
 
-  const api = { summarizeReadiness };
+  function buildDiagnosticsPayload(events, limits = {}) {
+    const maxUploadEvents = limits.maxUploadEvents || 100;
+    const maxTranscriptEvents = limits.maxTranscriptEvents || 20;
+    const transcript = (events || []).filter((e) => /assistant_reply|user_message/.test(e.event)).slice(-maxTranscriptEvents);
+    const nonTranscript = (events || []).filter((e) => !/assistant_reply|user_message/.test(e.event));
+    const trimmed = [...nonTranscript, ...transcript].slice(-maxUploadEvents);
+    return { createdAt: Date.now(), events: trimmed };
+  }
+
+  function shouldAutoUploadDiagnostics(event) {
+    return event && event.level === "error" && ["plot", "pdf", "api", "chat"].includes(event.category);
+  }
+
+  async function uploadDiagnostics(fetchImpl, url, payload, headers = {}) {
+    return fetchImpl(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...headers },
+      body: JSON.stringify(payload),
+    });
+  }
+
+  const api = { buildDiagnosticsPayload, shouldAutoUploadDiagnostics, summarizeReadiness, uploadDiagnostics };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   if (root) root.MarthaDiagnostics = api;
 })(typeof window !== "undefined" ? window : globalThis);
