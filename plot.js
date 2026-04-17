@@ -52,6 +52,10 @@
     return depth === 0;
   }
 
+  function hasDanglingOperator(expr) {
+    return /[+\-*/^]\s*$/.test(String(expr || "").trim());
+  }
+
   function unwrapOuterParentheses(expr) {
     if (!expr.startsWith("(") || !expr.endsWith(")")) return expr;
     let depth = 0;
@@ -134,6 +138,13 @@
     return found;
   }
 
+  function isDerivativePlotRequest(text) {
+    const lower = String(text || "").toLowerCase();
+    const drawWords = ["zeichne", "plot", "rajzol", "draw", "dibujar", "mutasd", "zeige", "show", "muestra", "graf"];
+    const derivativeWords = ["derivált", "derivative", "ableitung", "derivada", "f'", "f’", "f″", 'f"'];
+    return drawWords.some((word) => lower.includes(word)) && derivativeWords.some((word) => lower.includes(word));
+  }
+
   function validatePlotExpression(expr) {
     const mathApi = getMathApi();
     const normalized = normalizePlotExpression(expr)
@@ -147,6 +158,10 @@
     if (!hasBalancedParentheses(normalized)) {
       logPlot("warn", "plot_validation_failed", { expr, reason: "unbalanced_parentheses" });
       return { ok: false, reason: "Der Term hat unbalancierte Klammern." };
+    }
+    if (hasDanglingOperator(normalized)) {
+      logPlot("warn", "plot_validation_failed", { expr, reason: "dangling_operator" });
+      return { ok: false, reason: "Der Term endet unvollständig." };
     }
     if (containsUnsupportedRelations(normalized)) {
       logPlot("warn", "plot_validation_failed", { expr, reason: "unsupported_relation" });
@@ -353,12 +368,19 @@
   function renderPlotsFromText(text, containerEl, label) {
     const plots = detectPlots(text);
     const funcs = plots.length ? [] : extractFunctions(text);
-    const items = plots.length
+    const rawItems = plots.length
       ? plots.map((p) => ({ expr: p.expr, xmin: p.xmin, xmax: p.xmax }))
       : funcs.map((f) => {
           const range = guessRange(f.expr);
           return { expr: f.expr, xmin: range[0], xmax: range[1] };
         });
+    const items = rawItems.filter(({ expr }) => {
+      const validation = validatePlotExpression(expr);
+      if (!validation.ok) {
+        logPlot("warn", "plot_autorender_skipped", { expr, reason: validation.reason });
+      }
+      return validation.ok;
+    });
     if (!items.length) return;
     const section = document.createElement("div");
     section.style.cssText = "margin-top:12px;border-top:1px solid var(--bd);padding-top:10px";
@@ -375,6 +397,7 @@
     extractFunctions,
     guessRange,
     detectPlots,
+    isDerivativePlotRequest,
     validatePlotExpression,
     deriveExpression,
     drawPlot,

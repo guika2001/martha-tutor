@@ -2526,11 +2526,11 @@ async function sendMessage() {
   const txt = inp.value.trim();
   if (!txt) return;
   inp.value = ''; inp.style.height = 'auto';
-  const drawWords = ['zeichne','plot','rajzol','draw','dibujar'];
-  const derivativeWords = ['derivált','derivative','ableitung','derivada','f\'','f’','f″','f"'];
-  const lowerTxt = txt.toLowerCase();
+  if (window.MarthaPlot && typeof window.MarthaPlot.isDerivativePlotRequest === 'function') {
+    if (window.MarthaPlot.isDerivativePlotRequest(txt) && plotDerivativeFromTask(txt)) return;
+  }
+  const drawWords = ['zeichne','plot','rajzol','draw','dibujar','mutasd','zeige','show','muestra','graf'];
   if (drawWords.some(w => txt.toLowerCase().includes(w))) {
-    if (derivativeWords.some(w => lowerTxt.includes(w)) && plotDerivativeFromTask(txt)) return;
     if (extractFunctions(getPlottableTaskText(activeTask)).length) { plotFromTask(); return; }
   }
   const i = state.selectedIdx;

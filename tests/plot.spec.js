@@ -2,6 +2,7 @@ const {
   normalizePlotExpression,
   extractFunctions,
   detectPlots,
+  isDerivativePlotRequest,
   validatePlotExpression,
   deriveExpression,
   guessRange,
@@ -35,6 +36,13 @@ describe("plot helpers", () => {
     expect(plots[0]).toEqual({ expr: "x^3-3*x", xmin: -3, xmax: 3 });
   });
 
+  it("detects multilingual derivative plot requests", () => {
+    expect(isDerivativePlotRequest("mutasd a függvény deriváltját")).toBe(true);
+    expect(isDerivativePlotRequest("zeige die Ableitung")).toBe(true);
+    expect(isDerivativePlotRequest("show the derivative")).toBe(true);
+    expect(isDerivativePlotRequest("magyarázd el a deriváltat")).toBe(false);
+  });
+
   it("rejects symbolic coefficient terms", () => {
     expect(validatePlotExpression("ax^2+bx").ok).toBe(false);
   });
@@ -62,5 +70,9 @@ describe("plot helpers", () => {
     };
     expect(deriveExpression("x^3-3*x", 1)).toBe("3 * x ^ 2 - 3");
     delete global.math;
+  });
+
+  it("rejects incomplete auto-plot expressions instead of trying to render them", () => {
+    expect(validatePlotExpression("(2*x-1)*").ok).toBe(false);
   });
 });
