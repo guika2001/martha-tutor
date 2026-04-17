@@ -1,5 +1,6 @@
 const {
   buildValidationPrompt,
+  getModeCheckLine,
   getValidatorSystemPrompt,
   parseValidationResult,
 } = require("../solution-validator.js");
@@ -40,5 +41,16 @@ describe("solution validator", () => {
     expect(getValidatorSystemPrompt("hu")).toContain("validátor");
     expect(prompt).toContain("FELADATKONTEXTUS");
     expect(prompt).toContain("Megoldás");
+  });
+
+  it("adds explicit mode constraints for first-step validation", () => {
+    expect(getModeCheckLine("step", "hu")).toContain("első lépés");
+    expect(getValidatorSystemPrompt("hu", "step")).toContain("első lépés");
+    expect(buildValidationPrompt({
+      taskContext: "FELADAT",
+      draft: "Megoldás",
+      langCode: "hu",
+      responseMode: "step",
+    })).toContain("első lépés");
   });
 });

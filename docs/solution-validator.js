@@ -48,20 +48,57 @@
     };
   }
 
-  function getValidatorSystemPrompt(langCode = "de") {
+  function getModeCheckLine(responseMode = "solution", langCode = "de") {
+    const packs = {
+      hu: {
+        tip: "Ha a kért mód tipp, akkor a válasz nem lehet teljes megoldás.",
+        step: "Ha a kért mód első lépés, akkor a válasz csak az első lépést tartalmazhatja.",
+        solpath: "Ha a kért mód megoldási menet, akkor a válasz tervszintű maradjon, ne legyen teljes levezetés.",
+        solution: "Ha a kért mód teljes megoldás, akkor a válasz lehet teljes.",
+        explainer: "Ha a kért mód magyarázó, akkor a válasz legyen általános, ne feladatspecifikus teljes megoldás.",
+      },
+      en: {
+        tip: "If the requested mode is hint, the answer must not become a full solution.",
+        step: "If the requested mode is first step, the answer may contain only the first step.",
+        solpath: "If the requested mode is solution path, keep it at plan level, not a full derivation.",
+        solution: "If the requested mode is full solution, the answer may be complete.",
+        explainer: "If the requested mode is explainer, the answer should stay general instead of becoming a task-specific full solution.",
+      },
+      es: {
+        tip: "Si el modo pedido es pista, la respuesta no puede convertirse en una solución completa.",
+        step: "Si el modo pedido es primer paso, la respuesta solo puede contener el primer paso.",
+        solpath: "Si el modo pedido es camino de solución, mantenlo a nivel de plan, no de desarrollo completo.",
+        solution: "Si el modo pedido es solución completa, la respuesta puede ser completa.",
+        explainer: "Si el modo pedido es explicador, la respuesta debe mantenerse general y no convertirse en una solución completa de una tarea.",
+      },
+      de: {
+        tip: "Wenn der gewuenschte Modus Tipp ist, darf die Antwort keine vollstaendige Loesung werden.",
+        step: "Wenn der gewuenschte Modus Erster Schritt ist, darf die Antwort nur den ersten Schritt enthalten.",
+        solpath: "Wenn der gewuenschte Modus Loesungsweg ist, muss die Antwort auf Planungsebene bleiben und darf nicht voll ausrechnen.",
+        solution: "Wenn der gewuenschte Modus vollstaendige Loesung ist, darf die Antwort vollstaendig sein.",
+        explainer: "Wenn der gewuenschte Modus Erklaerer ist, soll die Antwort allgemein bleiben und nicht zu einer vollstaendigen Aufgabenloesung werden.",
+      },
+    };
+    const pack = packs[langCode] || packs.de;
+    return pack[responseMode] || pack.solution;
+  }
+
+  function getValidatorSystemPrompt(langCode = "de", responseMode = "solution") {
     const pack = getValidatorPack(langCode);
     return [
       pack.system,
       pack.onlyJson,
       pack.schema,
       pack.checks,
+      getModeCheckLine(responseMode, langCode),
     ].join(" ");
   }
 
-  function buildValidationPrompt({ taskContext, draft, langCode = "de" }) {
+  function buildValidationPrompt({ taskContext, draft, langCode = "de", responseMode = "solution" }) {
     const pack = getValidatorPack(langCode);
     return [
       pack.prompt,
+      getModeCheckLine(responseMode, langCode),
       "",
       pack.context,
       taskContext || "",
@@ -101,7 +138,7 @@
     }
   }
 
-  const api = { getValidatorPack, getValidatorSystemPrompt, buildValidationPrompt, parseValidationResult };
+  const api = { getValidatorPack, getModeCheckLine, getValidatorSystemPrompt, buildValidationPrompt, parseValidationResult };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   if (root) root.MarthaSolutionValidator = api;
 })(typeof window !== "undefined" ? window : globalThis);

@@ -657,6 +657,7 @@ const state = {
   loadedForecastVariant: null,
   chatContextKey: "base",
   chatEpoch: 0,
+  pendingResponseMode: "",
   explainerMode: false,
 };
 
@@ -1814,7 +1815,7 @@ function buildConversationSnippet(messages = []) {
     .join("\n");
 }
 
-async function generateValidatedTeacherReply({ task, messages, onStatus }) {
+async function generateValidatedTeacherReply({ task, messages, onStatus, responseMode = "solution" }) {
   const latestUserMessage = [...(messages || [])].reverse().find((entry) => entry.role === "user")?.content || "";
   const taskContext = buildContext(task);
   const conversation = buildConversationSnippet(messages);
@@ -1827,9 +1828,9 @@ async function generateValidatedTeacherReply({ task, messages, onStatus }) {
 
   updateStatus("Martha erstellt eine saubere Lehrerloesung ...");
   let candidate = await callGroq({
-    systemPrompt: styleApi.buildTeacherSystemPrompt ? styleApi.buildTeacherSystemPrompt(task, langCode) : getSystemPrompt(),
+    systemPrompt: styleApi.buildTeacherSystemPrompt ? styleApi.buildTeacherSystemPrompt(task, langCode, responseMode) : getSystemPrompt(),
     userPrompt: styleApi.buildDraftPrompt
-      ? styleApi.buildDraftPrompt({ taskContext, conversation, latestUserMessage, langCode })
+      ? styleApi.buildDraftPrompt({ taskContext, conversation, latestUserMessage, langCode, responseMode })
       : latestUserMessage,
     temperature: 0.2,
     maxTokens: 1400,
@@ -1839,9 +1840,9 @@ async function generateValidatedTeacherReply({ task, messages, onStatus }) {
 
   updateStatus("Martha validiert die Loesung ...");
   const validationRaw = await callGroq({
-    systemPrompt: validatorApi.getValidatorSystemPrompt ? validatorApi.getValidatorSystemPrompt(langCode) : "Antworte nur als JSON.",
+    systemPrompt: validatorApi.getValidatorSystemPrompt ? validatorApi.getValidatorSystemPrompt(langCode, responseMode) : "Antworte nur als JSON.",
     userPrompt: validatorApi.buildValidationPrompt
-      ? validatorApi.buildValidationPrompt({ taskContext, draft: candidate, langCode })
+      ? validatorApi.buildValidationPrompt({ taskContext, draft: candidate, langCode, responseMode })
       : candidate,
     temperature: 0,
     maxTokens: 700,
@@ -1857,13 +1858,14 @@ async function generateValidatedTeacherReply({ task, messages, onStatus }) {
       ...(validation.issues || []),
     ];
     const repaired = await callGroq({
-      systemPrompt: styleApi.buildTeacherSystemPrompt ? styleApi.buildTeacherSystemPrompt(task, langCode) : getSystemPrompt(),
+      systemPrompt: styleApi.buildTeacherSystemPrompt ? styleApi.buildTeacherSystemPrompt(task, langCode, responseMode) : getSystemPrompt(),
       userPrompt: styleApi.buildRepairPrompt({
         taskContext,
         latestUserMessage,
         draft: validation.correctedAnswer || candidate,
         issues: repairIssues,
         langCode,
+        responseMode,
       }),
       temperature: 0.15,
       maxTokens: 1400,
@@ -2490,13 +2492,17 @@ function plotDerivativeFromTask(promptText) {
   return true;
 }
 
-function quickSend(text) { document.getElementById('mi').value = text; sendMessage(); }
+function quickSend(text, responseMode = "") {
+  state.pendingResponseMode = responseMode || "";
+  document.getElementById('mi').value = text;
+  sendMessage();
+}
 function quickAction(action) {
   logEvent("info", "ui", "quick_action_triggered", { action });
   const prompt = window.MarthaQuickActions && typeof window.MarthaQuickActions.buildQuickActionPrompt === "function"
     ? window.MarthaQuickActions.buildQuickActionPrompt(action, _currentLang)
     : action;
-  quickSend(prompt);
+  quickSend(prompt, action);
 }
 
 function operatorDemandHelp() {
@@ -2514,6 +2520,8 @@ function operatorFullCreditHelp() {
 async function sendMessage() {
   if (state.streaming || !getActiveTask()) return;
   const activeTask = getActiveTask();
+  const responseMode = state.pendingResponseMode || (activeTask.isExplainerMode ? "explainer" : "solution");
+  state.pendingResponseMode = "";
   const inp = document.getElementById('mi');
   const txt = inp.value.trim();
   if (!txt) return;
@@ -2540,7 +2548,7 @@ async function sendMessage() {
       ...currentTaskMeta(),
       payload: {
         ...transcriptEvent.payload,
-        promptKind: activeTask.isExplainerMode ? "explainer" : "task",
+        promptKind: responseMode,
       },
     });
   }
@@ -2563,11 +2571,12 @@ async function sendMessage() {
   try {
     logEvent("info", "chat", "assistant_generation_started", {
       historyLength: state.history[historyKey].length,
-      promptKind: activeTask.isExplainerMode ? "explainer" : "task",
+      promptKind: responseMode,
     });
     full = await generateValidatedTeacherReply({
       task: activeTask,
       messages: state.history[historyKey],
+      responseMode,
       onStatus: (statusText) => {
         atEl.textContent = statusText;
         el.scrollTop = el.scrollHeight;
@@ -2602,7 +2611,7 @@ async function sendMessage() {
         ...currentTaskMeta(),
         payload: {
           ...transcriptEvent.payload,
-          replySource: activeTask.isExplainerMode ? "explainer" : "task",
+          replySource: responseMode,
         },
       });
     }

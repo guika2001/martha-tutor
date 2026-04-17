@@ -2,6 +2,7 @@ const {
   buildTeacherSystemPrompt,
   buildDraftPrompt,
   buildRepairPrompt,
+  getResponseModeInstruction,
 } = require("../solution-style.js");
 
 describe("solution style localization", () => {
@@ -35,5 +36,10 @@ describe("solution style localization", () => {
 
     expect(prompt).toContain("JAVÍTANDÓ PONTOK");
     expect(prompt).toContain("hiba");
+  });
+
+  it("builds a strict first-step instruction", () => {
+    expect(getResponseModeInstruction("step", "hu")).toContain("első érdemi lépést");
+    expect(buildTeacherSystemPrompt({ primaryOperator: "számítsd ki" }, "hu", "step")).toContain("első érdemi lépést");
   });
 });

@@ -69,7 +69,42 @@
     };
   }
 
-  function buildTeacherSystemPrompt(task = {}, langCode = "de") {
+  function getResponseModeInstruction(responseMode = "solution", langCode = "de") {
+    const packs = {
+      hu: {
+        tip: "Most csak egy rövid tippet adj, legfeljebb 2-3 mondatban. Ne oldd meg a feladatot.",
+        step: "Most kizárólag az első érdemi lépést mutasd meg, majd állj meg. Ne folytasd a teljes megoldással.",
+        solpath: "Most csak rövid megoldási tervet adj, ne vezesd le a teljes megoldást.",
+        solution: "Most teljes, ellenőrzött megoldást adj.",
+        explainer: "Általános matekos magyarázatot adj feladatkötés nélkül.",
+      },
+      en: {
+        tip: "Give only a short hint in at most 2-3 sentences. Do not solve the task.",
+        step: "Show only the first meaningful step and then stop. Do not continue with the full solution.",
+        solpath: "Give only a brief solution path, not the full worked solution.",
+        solution: "Give the full validated solution now.",
+        explainer: "Give a general math explanation without tying it to a specific task.",
+      },
+      es: {
+        tip: "Da solo una pista breve en 2-3 frases como máximo. No resuelvas el ejercicio.",
+        step: "Muestra solo el primer paso relevante y detente después. No continúes con la solución completa.",
+        solpath: "Da solo un plan breve de solución, no la resolución completa.",
+        solution: "Da ahora la solución completa validada.",
+        explainer: "Da una explicación matemática general sin vincularla a un ejercicio concreto.",
+      },
+      de: {
+        tip: "Gib jetzt nur einen kurzen Tipp in hoechstens 2-3 Saetzen. Loese die Aufgabe nicht.",
+        step: "Zeige jetzt nur den ersten sinnvollen Schritt und stoppe danach. Fuehre nicht die ganze Loesung aus.",
+        solpath: "Gib jetzt nur einen kurzen Loesungsweg, aber keine vollstaendige Ausrechnung.",
+        solution: "Gib jetzt die vollstaendige validierte Loesung.",
+        explainer: "Gib eine allgemeine Mathe-Erklaerung ohne Bindung an eine konkrete Aufgabe.",
+      },
+    };
+    const pack = packs[langCode] || packs.de;
+    return pack[responseMode] || pack.solution;
+  }
+
+  function buildTeacherSystemPrompt(task = {}, langCode = "de", responseMode = "solution") {
     const operator = task.primaryOperator || "loesen";
     const pack = getLanguagePack(langCode);
     return [
@@ -77,14 +112,16 @@
       pack.explain,
       pack.guard,
       pack.operator.replace("{operator}", operator),
+      getResponseModeInstruction(responseMode, langCode),
       pack.compact,
     ].join(" ");
   }
 
-  function buildDraftPrompt({ taskContext, conversation, latestUserMessage, langCode = "de" }) {
+  function buildDraftPrompt({ taskContext, conversation, latestUserMessage, langCode = "de", responseMode = "solution" }) {
     const pack = getLanguagePack(langCode);
     return [
       pack.draft,
+      getResponseModeInstruction(responseMode, langCode),
       "",
       pack.context,
       taskContext || "",
@@ -97,11 +134,12 @@
     ].join("\n");
   }
 
-  function buildRepairPrompt({ taskContext, latestUserMessage, draft, issues, langCode = "de" }) {
+  function buildRepairPrompt({ taskContext, latestUserMessage, draft, issues, langCode = "de", responseMode = "solution" }) {
     const pack = getLanguagePack(langCode);
     const issueList = (issues || []).map((issue) => `- ${issue.code}: ${issue.message}`).join("\n");
     return [
       pack.repair,
+      getResponseModeInstruction(responseMode, langCode),
       "",
       pack.context,
       taskContext || "",
@@ -117,7 +155,7 @@
     ].join("\n");
   }
 
-  const api = { getLanguagePack, buildTeacherSystemPrompt, buildDraftPrompt, buildRepairPrompt };
+  const api = { getLanguagePack, getResponseModeInstruction, buildTeacherSystemPrompt, buildDraftPrompt, buildRepairPrompt };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   if (root) root.MarthaSolutionStyle = api;
 })(typeof window !== "undefined" ? window : globalThis);
