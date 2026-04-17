@@ -4,6 +4,10 @@
   let pdfJsPromise = null;
   const pdfCache = new Map();
 
+  function logPdf(level, event, payload) {
+    if (root && root._marthaLogEvent) root._marthaLogEvent(level, "pdf", event, payload || {});
+  }
+
   function normalizeToken(text) {
     return String(text || "")
       .toLowerCase()
@@ -72,13 +76,22 @@
         best = { score: matches.length, pageNumber, matches };
       }
     }
-    return {
+    const result = {
       ok: best.score > 0,
       pageNumber: best.pageNumber,
       matches: best.matches,
       score: best.score,
       totalTokens: searchTokens.length,
     };
+    logPdf(result.ok ? "info" : "warn", "pdf_page_selected", {
+      href: source.href,
+      taskId: task && task.task_id,
+      figureLabel: task && task.figureLabel,
+      pageNumber: result.pageNumber,
+      score: result.score,
+      totalTokens: result.totalTokens,
+    });
+    return result;
   }
 
   function normalizeTextItems(items) {
@@ -176,6 +189,13 @@
       footer.rel = "noopener noreferrer";
       footer.textContent = "PDF auf passender Seite öffnen";
       container.appendChild(footer);
+      logPdf(validation.ok ? "info" : "warn", "pdf_preview_rendered", {
+        href: primary.href,
+        taskId: task && task.task_id,
+        pageNumber: targetPage,
+        crop: Boolean(cropBox),
+        validated: Boolean(validation.ok),
+      });
       return validation;
     } catch (error) {
       container.dataset.status = "PDF-Vorschau fehlgeschlagen";
@@ -184,6 +204,11 @@
       err.className = "abw";
       err.textContent = error.message || "Unbekannter PDF-Fehler";
       container.appendChild(err);
+      logPdf("error", "pdf_preview_failed", {
+        href: primary.href,
+        taskId: task && task.task_id,
+        error: error.message || "Unbekannter PDF-Fehler",
+      });
       return { ok: false, pageNumber: 0, matches: [], score: 0, totalTokens: 0, error: error.message || "Unbekannter PDF-Fehler" };
     }
   }

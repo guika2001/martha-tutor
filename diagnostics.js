@@ -26,7 +26,12 @@
     const transcript = (events || []).filter((e) => /assistant_reply|user_message/.test(e.event)).slice(-maxTranscriptEvents);
     const nonTranscript = (events || []).filter((e) => !/assistant_reply|user_message/.test(e.event));
     const trimmed = [...nonTranscript, ...transcript].slice(-maxUploadEvents);
-    return { createdAt: Date.now(), events: trimmed };
+    return {
+      createdAt: Date.now(),
+      appVersion: limits.appVersion || "martha-4.0",
+      diagnosticsKind: limits.diagnosticsKind || "manual",
+      events: trimmed,
+    };
   }
 
   function shouldAutoUploadDiagnostics(event) {
@@ -41,7 +46,11 @@
     });
   }
 
-  const api = { buildDiagnosticsPayload, shouldAutoUploadDiagnostics, summarizeReadiness, uploadDiagnostics };
+  function createDiagnosticsUrl(apiUrl) {
+    return String(apiUrl || "").replace(/\/+$/, "") + "/logs";
+  }
+
+  const api = { buildDiagnosticsPayload, shouldAutoUploadDiagnostics, summarizeReadiness, uploadDiagnostics, createDiagnosticsUrl };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   if (root) root.MarthaDiagnostics = api;
 })(typeof window !== "undefined" ? window : globalThis);

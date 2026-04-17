@@ -1,4 +1,8 @@
 (function (root) {
+  function logPlot(level, event, payload) {
+    if (root && root._marthaLogEvent) root._marthaLogEvent(level, "plot", event, payload || {});
+  }
+
   function getMathApi() {
     if (typeof math !== "undefined") return math;
     if (typeof require === "function") {
@@ -137,21 +141,26 @@
       .replace(/([)])(\d)/g, "$1*$2")
       .replace(/([x)])([x(])/g, "$1*$2");
     if (!normalized || !normalized.includes("x")) {
+      logPlot("warn", "plot_validation_failed", { expr, reason: "missing_x" });
       return { ok: false, reason: "Kein plottbarer Funktionsterm mit x gefunden." };
     }
     if (!hasBalancedParentheses(normalized)) {
+      logPlot("warn", "plot_validation_failed", { expr, reason: "unbalanced_parentheses" });
       return { ok: false, reason: "Der Term hat unbalancierte Klammern." };
     }
     if (containsUnsupportedRelations(normalized)) {
+      logPlot("warn", "plot_validation_failed", { expr, reason: "unsupported_relation" });
       return { ok: false, reason: "Der Ausdruck ist eine Gleichung oder Relation, keine Funktion." };
     }
     if (!hasOnlySupportedIdentifiers(normalized)) {
+      logPlot("warn", "plot_validation_failed", { expr, reason: "unsupported_identifier" });
       return { ok: false, reason: "Der Term enthält nicht unterstützte Bezeichner." };
     }
     if (mathApi) {
       try {
         mathApi.parse(normalized);
       } catch (error) {
+        logPlot("error", "plot_parse_failed", { expr, error: error.message });
         return { ok: false, reason: "Parse-Fehler: " + error.message };
       }
     }
@@ -228,6 +237,7 @@
         catch (_) { return NaN; }
       };
     } catch (ex) {
+      logPlot("error", "plot_compile_failed", { expr: validation.expr, error: ex.message });
       const err = document.createElement("div");
       err.className = "abw";
       err.textContent = "Parse-Fehler: " + ex.message;
@@ -250,6 +260,7 @@
       }
     }
     if (pts.length < 2) {
+      logPlot("warn", "plot_empty_range", { expr: validation.expr, xmin, xmax });
       const err = document.createElement("div");
       err.className = "abw";
       err.textContent = "Keine darstellbaren Werte im gewählten Bereich.";
@@ -336,6 +347,7 @@
 
     drawCurve("rgba(124,108,255,0.15)", 8);
     drawCurve("#7c6cff", 2.5);
+    logPlot("info", "plot_rendered", { expr: validation.expr, xmin, xmax });
   }
 
   function renderPlotsFromText(text, containerEl, label) {

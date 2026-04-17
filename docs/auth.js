@@ -3,6 +3,10 @@
   let session = null;
   let callbacks = { onAuthenticated: null, onSignedOut: null };
 
+  function logAuth(level, event, payload = {}) {
+    if (root && root._marthaLogEvent) root._marthaLogEvent(level, "auth", event, payload);
+  }
+
   function hasConfig() {
     return !!(root.CONFIG && root.CONFIG.SUPABASE_URL && root.CONFIG.SUPABASE_ANON_KEY);
   }
@@ -73,9 +77,11 @@
       options: { redirectTo },
     });
     if (result.error) {
+      logAuth("error", "auth_signin_failed", { error: result.error.message || "signin_failed" });
       renderState("error", result.error.message);
       throw result.error;
     }
+    logAuth("info", "auth_signin_started", { provider: "google", redirectTo });
   }
 
   async function signOut() {
@@ -83,6 +89,7 @@
     if (!authClient) return;
     await authClient.auth.signOut();
     session = null;
+    logAuth("info", "auth_signed_out");
     renderState("signed_out");
     if (callbacks.onSignedOut) callbacks.onSignedOut();
   }
@@ -100,12 +107,14 @@
   async function initAuth(options) {
     callbacks = Object.assign({}, callbacks, options || {});
     if (!hasConfig()) {
+      logAuth("warn", "auth_missing_config");
       renderState("missing_config");
       if (callbacks.onSignedOut) callbacks.onSignedOut();
       return { ok: false, reason: "missing_config" };
     }
     const authClient = getClient();
     if (!authClient) {
+      logAuth("error", "auth_client_unavailable");
       renderState("error", "Supabase script nem töltődött be.");
       if (callbacks.onSignedOut) callbacks.onSignedOut();
       return { ok: false, reason: "client_unavailable" };
@@ -117,6 +126,10 @@
 
     authClient.auth.onAuthStateChange((_event, nextSession) => {
       session = nextSession || null;
+      logAuth("info", "auth_state_changed", {
+        event: _event,
+        hasSession: Boolean(session),
+      });
       if (session && session.user) {
         renderState("authenticated", session);
         if (callbacks.onAuthenticated) callbacks.onAuthenticated(session);
@@ -127,11 +140,15 @@
     });
 
     if (session && session.user) {
+      logAuth("info", "auth_session_restored", {
+        email: session.user.email || "",
+      });
       renderState("authenticated", session);
       if (callbacks.onAuthenticated) callbacks.onAuthenticated(session);
       return { ok: true, session };
     }
 
+    logAuth("info", "auth_signed_out_state");
     renderState("signed_out");
     if (callbacks.onSignedOut) callbacks.onSignedOut();
     return { ok: true, session: null };

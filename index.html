@@ -12,6 +12,7 @@
 <script src="https://cdn.jsdelivr.net/npm/mathjs@13.2.0/lib/browser/math.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="storage.js"></script>
+<script src="logger.js"></script>
 <script src="simulation.js"></script>
 <script src="diagnostics.js"></script>
 <script src="study-plan.js"></script>
@@ -94,6 +95,8 @@
       <button class="btn-sec sim-launch-btn" id="openForecastBtn" onclick="window._openForecastModal()" style="margin-top:8px">📊 Prüfungsprognose</button>
       <button class="btn-sec sim-launch-btn" id="openExplainerBtn" onclick="window._openExplainerMode()" style="margin-top:8px">💬 Magyarázó</button>
       <button class="btn-sec sim-launch-btn" id="openHelpBtn" onclick="window._openHelpManual()" style="margin-top:8px">❓ Súgó</button>
+      <button class="btn-sec sim-launch-btn" id="sendDiagnosticsBtn" onclick="window._sendDiagnostics()" style="margin-top:8px">🛠 Diagnosztika küldése</button>
+      <button class="btn-sec sim-launch-btn" id="exportLogsBtn" onclick="window._exportLogs()" style="margin-top:8px">🧾 Log export</button>
     </div>
     <div class="auth-inline" id="authBar" style="display:none">
       <div class="auth-inline-copy">
@@ -361,6 +364,7 @@ const LANGUAGES = {
       forecast_intro: "Die Varianten priorisieren wahrscheinliche NRW-Muster. Sie sind eine lernorientierte Prognose, keine echte Vorhersage der Prüfung.",
       forecast_load: "Variante laden", forecast_close: "Schließen",
       help: "❓ Hilfe", help_open: "❓ Benutzerhandbuch",
+      send_diagnostics: "🛠 Diagnostik senden", export_logs: "🧾 Log export",
       operator_demand: "🧭 Was verlangt der Operator?", operator_full: "📝 Volle-BE Antwort",
       understood: "✔ Verstanden", unsure: "✖ Unsicher", repeat_next: "🗂 Nächste Wiederholung",
       uploaded_with_martha: "📚 Mit Martha öffnen", open_with_martha: "📚 Mit Martha öffnen",
@@ -405,6 +409,7 @@ Aufgabe auf Deutsch.`,
       forecast_intro: "A változatok a valószínű NRW-mintákat priorizálják. Ez tanulási célú prognózis, nem a valódi vizsga előrejelzése.",
       forecast_load: "Változat betöltése", forecast_close: "Bezárás",
       help: "❓ Súgó", help_open: "❓ Felhasználói kézikönyv",
+      send_diagnostics: "🛠 Diagnosztika küldése", export_logs: "🧾 Log export",
       operator_demand: "🧭 Mit kér az operátor?", operator_full: "📝 Teljes pontos válasz",
       understood: "✔ Értem", unsure: "✖ Bizonytalan", repeat_next: "🗂 Következő ismétlés",
       uploaded_with_martha: "📚 Betöltés Marthába", open_with_martha: "📚 Megnyitás Marthával",
@@ -449,6 +454,7 @@ A feladatot magyarul fogalmazd meg.`,
       forecast_intro: "These variants prioritize likely NRW patterns. They are a study-oriented forecast, not a real prediction of the exam.",
       forecast_load: "Load variant", forecast_close: "Close",
       help: "❓ Help", help_open: "❓ User manual",
+      send_diagnostics: "🛠 Send diagnostics", export_logs: "🧾 Export logs",
       operator_demand: "🧭 What does the operator require?", operator_full: "📝 Full-credit answer",
       understood: "✔ Understood", unsure: "✖ Unsure", repeat_next: "🗂 Next review",
       uploaded_with_martha: "📚 Open with Martha", open_with_martha: "📚 Open with Martha",
@@ -491,6 +497,7 @@ Write the task in English.`,
       forecast_intro: "Estas variantes priorizan patrones probables de NRW. Son una previsión orientada al estudio, no una predicción real del examen.",
       forecast_load: "Cargar variante", forecast_close: "Cerrar",
       help: "❓ Ayuda", help_open: "❓ Manual del usuario",
+      send_diagnostics: "🛠 Enviar diagnóstico", export_logs: "🧾 Exportar logs",
     },
     system: `Eres Martha, una profesora de matemáticas experimentada para el Abitur de NRW.
 MÉTODO: Enseñanza socrática. Primero pregunta qué intentó. NUNCA des la solución inmediatamente.
@@ -512,9 +519,14 @@ function getPracticeSystemPrompt() { return getLang().practice_system; }
 
 function setLanguage(code) {
   if (!LANGUAGES[code]) return;
+  const previousLang = _currentLang;
   _currentLang = code;
   try { localStorage.setItem("martha_lang", code); } catch(_) {}
   applyUILanguage();
+  logEvent("info", "ui", "language_changed", {
+    previousLang,
+    nextLang: code,
+  });
   if (typeof state !== "undefined" && state.selectedIdx >= 0 && typeof getActiveHistoryKey === "function") {
     state.history[getActiveHistoryKey()] = [];
     if (typeof renderChat === "function") renderChat(state.selectedIdx);
@@ -550,6 +562,8 @@ function applyUILanguage() {
   set("welcomeForecastBtn", ui.forecast_open || "📊 Wahrscheinliche Probeklausuren");
   set("welcomeExplainerBtn", ui.explainer_open || "💬 Martha etwas fragen");
   set("welcomeHelpBtn", ui.help_open || "❓ Benutzerhandbuch");
+  set("sendDiagnosticsBtn", ui.send_diagnostics || "🛠 Diagnostik senden");
+  set("exportLogsBtn", ui.export_logs || "🧾 Log export");
   set("forecastModalTitle", ui.forecast_title || "📊 Prüfungsprognose");
   set("forecastIntro", ui.forecast_intro || "Die Varianten priorisieren wahrscheinliche NRW-Muster. Sie sind eine lernorientierte Prognose, keine echte Vorhersage der Prüfung.");
   set("forecastLoadBtn", ui.forecast_load || "Variante laden");
@@ -581,12 +595,16 @@ function applyUILanguage() {
 window._setLang = setLanguage;
 
 function openHelpManual() {
+  logEvent("info", "ui", "help_opened", {
+    href: "martha-4.0-user-manual-hu.html",
+  });
   window.open("martha-4.0-user-manual-hu.html", "_blank", "noopener");
 }
 
 window._openHelpManual = openHelpManual;
 
 function openExplainerMode() {
+  logEvent("info", "ui", "explainer_opened");
   state.explainerMode = true;
   clearForecastState();
   state.selectedIdx = -1;
@@ -641,6 +659,117 @@ const state = {
 };
 
 const appStorage = window.MarthaStorage ? window.MarthaStorage.createStorage("martha4") : null;
+const appLogger = window.MarthaLogger ? window.MarthaLogger.createLogger() : null;
+let lastDiagnosticsUploadAt = 0;
+
+function currentAppMode() {
+  if (state.explainerMode) return "explainer";
+  if (state.activeSimulation) return "simulation";
+  if (state.loadedForecastVariant) return "forecast";
+  return "task";
+}
+
+function currentTaskMeta() {
+  const task = getActiveTask();
+  return {
+    taskId: task ? task.task_id || "" : "",
+    blockId: state.selectedBlockId || "",
+    lang: _currentLang || "de",
+    mode: currentAppMode(),
+    sessionId: state.chatContextKey || "",
+    chatContextKey: state.chatContextKey || "",
+  };
+}
+
+function logEvent(level, category, event, payload = {}, message = "") {
+  if (!appLogger) return null;
+  const entry = {
+    level,
+    category,
+    event,
+    message,
+    ...currentTaskMeta(),
+    payload,
+  };
+  appLogger.push(entry);
+  return entry;
+}
+
+window._marthaLogEvent = logEvent;
+
+function buildDiagnosticsPayload(kind = "manual") {
+  if (!appLogger || !window.MarthaDiagnostics) return null;
+  return window.MarthaDiagnostics.buildDiagnosticsPayload(appLogger.getEvents(), {
+    diagnosticsKind: kind,
+    appVersion: "martha-4.0",
+    maxUploadEvents: 100,
+    maxTranscriptEvents: 20,
+  });
+}
+
+async function sendDiagnostics(kind = "manual") {
+  if (!appLogger || !window.MarthaDiagnostics || !window.MarthaApi) return false;
+  const payload = buildDiagnosticsPayload(kind);
+  if (!payload) return false;
+  const url = window.MarthaDiagnostics.createDiagnosticsUrl(CONFIG.API_URL);
+  try {
+    const response = await window.MarthaDiagnostics.uploadDiagnostics(window.MarthaApi.authorizedFetch, url, payload);
+    const data = await response.json().catch(() => ({}));
+    logEvent(response.ok ? "info" : "error", "diagnostics", response.ok ? "diagnostics_sent" : "diagnostics_send_failed", {
+      status: response.status,
+      diagnosticsId: data.diagnosticsId || "",
+      kind,
+    });
+    const st = document.getElementById("st");
+    if (st && response.ok) st.textContent = `Diagnostik gesendet · ${data.diagnosticsId || "ok"}`;
+    lastDiagnosticsUploadAt = Date.now();
+    return response.ok;
+  } catch (error) {
+    logEvent("error", "diagnostics", "diagnostics_send_exception", {
+      kind,
+      error: String(error && error.message || error),
+    });
+    return false;
+  }
+}
+
+function maybeAutoUploadDiagnostics(entry) {
+  if (!entry || !window.MarthaDiagnostics || !window.MarthaDiagnostics.shouldAutoUploadDiagnostics(entry)) return;
+  if (Date.now() - lastDiagnosticsUploadAt < 30000) return;
+  void sendDiagnostics("auto");
+}
+
+function exportLogs() {
+  if (!appLogger) return;
+  const blob = new Blob([JSON.stringify(appLogger.getEvents(), null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `martha-diagnostics-${Date.now()}.json`;
+  link.click();
+  URL.revokeObjectURL(url);
+  logEvent("info", "diagnostics", "diagnostics_exported", { count: appLogger.getEvents().length });
+}
+
+window._sendDiagnostics = sendDiagnostics;
+window._exportLogs = exportLogs;
+
+window.addEventListener("error", (event) => {
+  const entry = logEvent("error", "ui", "window_error", {
+    message: event.message || "",
+    source: event.filename || "",
+    lineno: event.lineno || 0,
+    colno: event.colno || 0,
+  }, event.message || "window_error");
+  maybeAutoUploadDiagnostics(entry);
+});
+
+window.addEventListener("unhandledrejection", (event) => {
+  const entry = logEvent("error", "chat", "unhandled_rejection", {
+    reason: String((event.reason && event.reason.message) || event.reason || "unknown"),
+  });
+  maybeAutoUploadDiagnostics(entry);
+});
 
 function getActiveTask() {
   return state.selectedTaskRef || state.tasks[state.selectedIdx] || null;
@@ -898,6 +1027,13 @@ function renderDiagnosticCards() {
 function recordTaskOutcome(success) {
   const task = getActiveTask();
   if (!task) return;
+  logEvent("info", "learning", "task_outcome_recorded", {
+    success: Boolean(success),
+    topic: task.topic || "",
+    operator: task.primaryOperator || "",
+    toolMode: task.toolMode || "",
+    examPart: task.examPart || "",
+  });
   const events = loadPerformanceEvents();
   events.push({
     topic: task.topic || null,
@@ -1087,6 +1223,11 @@ function renderForecastContent() {
 }
 
 function openForecastModal() {
+  logEvent("info", "ui", "forecast_modal_opened", {
+    level: state.levelFilter === "all" ? "GK" : state.levelFilter,
+    year: state.currentYear || "ab-2026",
+    lang: _currentLang || "de",
+  });
   state.forecastLevel = state.levelFilter === "all" ? "GK" : state.levelFilter;
   state.selectedForecastVariantId = "";
   renderForecastContent();
@@ -1094,6 +1235,7 @@ function openForecastModal() {
 }
 
 function closeForecastModal() {
+  logEvent("info", "ui", "forecast_modal_closed");
   document.getElementById("forecastModal").style.display = "none";
 }
 
@@ -1104,6 +1246,13 @@ function loadForecastVariantById(variantId, focusBlockId = "") {
   const variants = window.MarthaForecast.buildForecastVariants(state.taskIndex, { level, year, lang: _currentLang || "de" });
   const variant = variants.find((entry) => entry.id === variantId);
   if (!variant) return;
+  logEvent("info", "ui", "forecast_variant_loaded", {
+    variantId,
+    focusBlockId,
+    level,
+    year,
+    blockCount: variant.blocks.length,
+  });
   state.explainerMode = false;
   state.levelFilter = variant.level || level;
   state.currentTopic = "";
@@ -1150,6 +1299,12 @@ function startSimulation() {
   const taskIndexes = window.MarthaSimulation.buildSimulationTaskIndexes(view);
 
   if (!topic || !taskIndexes.length) {
+    logEvent("warn", "simulation", "simulation_start_blocked", {
+      level: level || "all",
+      topic,
+      examPart,
+      toolType,
+    });
     if (hint) hint.textContent = "Für diese Auswahl wurden keine Aufgabenblöcke gefunden. Wähle ein Thema mit sichtbaren Aufgaben.";
     return;
   }
@@ -1169,6 +1324,14 @@ function startSimulation() {
     durationMinutes,
     context: selection,
   });
+  logEvent("info", "simulation", "simulation_started", {
+    level: level || "all",
+    topic,
+    examPart,
+    toolType,
+    durationMinutes,
+    taskCount: taskIndexes.length,
+  });
   saveSimulationState();
   if (state.simulationTimerId) clearInterval(state.simulationTimerId);
   state.simulationTimerId = setInterval(updateSimulationTimer, 1000);
@@ -1178,6 +1341,10 @@ function startSimulation() {
 }
 
 function finishSimulation(expired = false) {
+  logEvent("info", "simulation", "simulation_finished", {
+    expired,
+    hadActiveSimulation: Boolean(state.activeSimulation),
+  });
   if (state.simulationTimerId) {
     clearInterval(state.simulationTimerId);
     state.simulationTimerId = null;
@@ -2013,6 +2180,15 @@ window._navBack = () => {
 window._selectBlock = (blockId) => {
   const block = getBlockById(blockId);
   if (!block) return;
+  logEvent("info", "task", "block_selected", {
+    blockId,
+    label: block.label,
+    level: block.level,
+    topic: block.topic,
+    year: block.year,
+    examPart: block.examPart,
+    taskType: block.taskType,
+  });
   state.explainerMode = false;
   state.selectedBlockId = blockId;
   state.selectedTaskRef = window.MarthaTaskNav && window.MarthaTaskNav.buildCombinedTask
@@ -2226,6 +2402,9 @@ function plotFromTask() {
   if (state.selectedIdx < 0) return;
   const t = getActiveTask();
   if (!t) return;
+  logEvent("info", "plot", "plot_requested_from_task", {
+    taskId: t.task_id || "",
+  });
   const funcs = extractFunctions(getPlottableTaskText(t));
   const el = document.getElementById('cms');
   const hosts = window.MarthaChatDom && typeof window.MarthaChatDom.getChatHosts === "function"
@@ -2296,6 +2475,7 @@ function plotDerivativeFromTask(promptText) {
 
 function quickSend(text) { document.getElementById('mi').value = text; sendMessage(); }
 function quickAction(action) {
+  logEvent("info", "ui", "quick_action_triggered", { action });
   const prompt = window.MarthaQuickActions && typeof window.MarthaQuickActions.buildQuickActionPrompt === "function"
     ? window.MarthaQuickActions.buildQuickActionPrompt(action, _currentLang)
     : action;
@@ -2316,6 +2496,7 @@ function operatorFullCreditHelp() {
 
 async function sendMessage() {
   if (state.streaming || !getActiveTask()) return;
+  const activeTask = getActiveTask();
   const inp = document.getElementById('mi');
   const txt = inp.value.trim();
   if (!txt) return;
@@ -2324,9 +2505,8 @@ async function sendMessage() {
   const derivativeWords = ['derivált','derivative','ableitung','derivada','f\'','f’','f″','f"'];
   const lowerTxt = txt.toLowerCase();
   if (drawWords.some(w => txt.toLowerCase().includes(w))) {
-    const t = getActiveTask();
     if (derivativeWords.some(w => lowerTxt.includes(w)) && plotDerivativeFromTask(txt)) return;
-    if (extractFunctions(getPlottableTaskText(t)).length) { plotFromTask(); return; }
+    if (extractFunctions(getPlottableTaskText(activeTask)).length) { plotFromTask(); return; }
   }
   const i = state.selectedIdx;
   const historyKey = getActiveHistoryKey();
@@ -2336,6 +2516,17 @@ async function sendMessage() {
     saveSimulationState();
   }
   state.history[historyKey].push({role:'user', content:txt});
+  if (appLogger && window.MarthaLogger) {
+    const transcriptEvent = window.MarthaLogger.buildTranscriptEvent("user_message", txt, "user", appLogger.getLimits());
+    appLogger.push({
+      ...transcriptEvent,
+      ...currentTaskMeta(),
+      payload: {
+        ...transcriptEvent.payload,
+        promptKind: activeTask.isExplainerMode ? "explainer" : "task",
+      },
+    });
+  }
   const el = document.getElementById('cms');
   const hosts = window.MarthaChatDom && typeof window.MarthaChatDom.getChatHosts === "function"
     ? window.MarthaChatDom.getChatHosts(el, document)
@@ -2350,17 +2541,40 @@ async function sendMessage() {
   let full = '';
   const atEl = document.querySelector('#' + tid + ' .at');
   try {
+    logEvent("info", "chat", "assistant_generation_started", {
+      historyLength: state.history[historyKey].length,
+      promptKind: activeTask.isExplainerMode ? "explainer" : "task",
+    });
     full = await generateValidatedTeacherReply({
-      task: getActiveTask(),
+      task: activeTask,
       messages: state.history[historyKey],
       onStatus: (statusText) => {
         atEl.textContent = statusText;
         el.scrollTop = el.scrollHeight;
       },
     });
-  } catch(ex) { full = full || 'Verbindungsfehler: ' + ex.message; }
+  } catch(ex) {
+    logEvent("error", "chat", "assistant_generation_failed", {
+      error: String(ex && ex.message || ex),
+    });
+    full = full || 'Verbindungsfehler: ' + ex.message;
+  }
   if (full) {
     state.history[historyKey].push({role:'assistant', content:full});
+    if (appLogger && window.MarthaLogger) {
+      const transcriptEvent = window.MarthaLogger.buildTranscriptEvent("assistant_reply", full, "assistant", appLogger.getLimits());
+      appLogger.push({
+        ...transcriptEvent,
+        ...currentTaskMeta(),
+        payload: {
+          ...transcriptEvent.payload,
+          replySource: activeTask.isExplainerMode ? "explainer" : "task",
+        },
+      });
+    }
+    logEvent("info", "chat", "assistant_generation_completed", {
+      replyLength: full.length,
+    });
     const lastMsg = document.getElementById(tid);
     if (lastMsg) {
       const at = lastMsg.querySelector('.at');

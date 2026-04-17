@@ -3,6 +3,7 @@ const {
   shouldAutoUploadDiagnostics,
   summarizeReadiness,
   uploadDiagnostics,
+  createDiagnosticsUrl,
 } = require("../diagnostics.js");
 
 describe("diagnostics", () => {
@@ -40,6 +41,10 @@ describe("diagnostics payload", () => {
   it("uploads automatically only for high-value failures", () => {
     expect(shouldAutoUploadDiagnostics({ category: "plot", level: "error" })).toBe(true);
     expect(shouldAutoUploadDiagnostics({ category: "ui", level: "info" })).toBe(false);
+  });
+
+  it("creates a worker logs endpoint from the base api url", () => {
+    expect(createDiagnosticsUrl("https://example.workers.dev")).toBe("https://example.workers.dev/logs");
   });
 });
 

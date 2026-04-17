@@ -45,6 +45,17 @@ describe("logger ring buffer", () => {
     expect(persisted.events).toHaveLength(2);
     expect(persisted.events.map((e) => e.event)).toEqual(["b", "c"]);
   });
+
+  it("caps transcript-bearing events independently of total event count", () => {
+    const logger = createLogger({ maxEvents: 10, maxTranscriptEvents: 2, maxPersistedEvents: 10 });
+    logger.push(buildTranscriptEvent("user_message", "one", "user", logger.getLimits()));
+    logger.push(buildTranscriptEvent("assistant_reply", "two", "assistant", logger.getLimits()));
+    logger.push(buildTranscriptEvent("user_message", "three", "user", logger.getLimits()));
+
+    const transcript = logger.getEvents().filter((event) => /assistant_reply|user_message/.test(event.event));
+    expect(transcript).toHaveLength(2);
+    expect(transcript.map((event) => event.payload.text)).toEqual(["two", "three"]);
+  });
 });
 
 describe("truncateText", () => {
