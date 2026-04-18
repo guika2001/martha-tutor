@@ -144,12 +144,19 @@
     if (!matches.length) return [];
     const topScore = scoreMatch(task, matches[0]);
     const narrowed = matches.filter((candidate) => scoreMatch(task, candidate) === topScore);
-    return narrowed.map((candidate) => ({
-      href: buildPdfHref(candidate.file),
-      label: labelForCandidate(candidate, narrowed.length > 1),
-      file: candidate.file,
-      validation: validateFigurePdfSource(task, candidate),
-    }));
+    const seenLabels = new Set();
+    return narrowed.reduce((acc, candidate) => {
+      const label = labelForCandidate(candidate, narrowed.length > 1);
+      if (seenLabels.has(label)) return acc;
+      seenLabels.add(label);
+      acc.push({
+        href: buildPdfHref(candidate.file),
+        label,
+        file: candidate.file,
+        validation: validateFigurePdfSource(task, candidate),
+      });
+      return acc;
+    }, []);
   }
 
   const api = {

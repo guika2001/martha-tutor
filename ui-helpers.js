@@ -64,20 +64,6 @@
     const text = doc.createElement("span");
     text.textContent = `${notice.icon} ${notice.message}`;
     element.appendChild(text);
-    if (notice.sources && notice.sources.length) {
-      const links = doc.createElement("div");
-      links.className = "notice-links";
-      notice.sources.forEach((source) => {
-        const anchor = doc.createElement("a");
-        anchor.className = "notice-link";
-        anchor.href = source.href;
-        anchor.target = "_blank";
-        anchor.rel = "noopener noreferrer";
-        anchor.textContent = source.label;
-        links.appendChild(anchor);
-      });
-      element.appendChild(links);
-    }
     return element;
   }
 

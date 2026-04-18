@@ -47,10 +47,7 @@ describe("ui helpers", () => {
 
     expect(screen.getByText(/CAS\/MMS:/)).toBeInTheDocument();
     expect(screen.getByText(/Abbildung 1 erforderlich/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Original-PDF/ })).toHaveAttribute(
-      "href",
-      expect.stringContaining("Mathematik_LK_2025-Beispiel_1_Prüfungsteil_LK_Wahlpflichtaufgabe_bis_2025.pdf")
-    );
+    expect(screen.queryByRole("link", { name: /Original-PDF/ })).not.toBeInTheDocument();
   });
 
   it("renders a redraw status badge when a validated redraw is available", () => {

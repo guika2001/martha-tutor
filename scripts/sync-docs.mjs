@@ -37,6 +37,7 @@ const filesToCopy = [
   "study-plan.js",
   "tasks-normalize.js",
   "tool-mode.js",
+  "upload-cleanup.js",
   "ui-helpers.js",
   "vector-guards.js",
   "vector-redraw.js",

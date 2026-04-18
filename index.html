@@ -37,6 +37,7 @@
 <script src="chat-context.js"></script>
 <script src="forecast.js"></script>
 <script src="explainer-mode.js"></script>
+<script src="upload-cleanup.js"></script>
 <script src="ui-helpers.js"></script>
 <script src="tasks-normalize.js"></script>
 <script src="plot.js"></script>
@@ -3238,6 +3239,8 @@ LATEX — einmal, korrekt, nie doppelt:
 - Spaltenvektoren: $\begin{pmatrix} 1 \\ -2 \\ 4 \end{pmatrix}$
 - Punkte: $P(1 \mid -2 \mid 4)$
 - NIEMALS Unicode-Zeichen fuer Mathe: kein ⃗, kein ×, kein ∈ als Text — immer LaTeX
+- Trigonometrische und Standardfunktionen NIEMALS uebersetzen oder erraten: nur Standardformen wie cos(x), sin(x), tan(x), exp(x), log(x)
+- Keine Fantasiewoerter oder OCR-Raetsel in Formeln. Wenn ein Funktionsterm nicht klar lesbar ist, lasse ihn aus statt ihn falsch zu erraten.
 
 ABBILDUNGEN UND GRAFIKEN:
 - Koordinatensystem mit eingetragenen Punkten/Vektoren (Geometrie):
@@ -3305,12 +3308,15 @@ async function analyzeUpload() {
   }
 
   if (full && !full.includes("KEIN_AUFGABE") && !full.includes("MEGOLDAS_OLDAL")) {
+    const cleanedFull = window.MarthaUploadCleanup && typeof window.MarthaUploadCleanup.sanitizeExtractedTaskText === "function"
+      ? window.MarthaUploadCleanup.sanitizeExtractedTaskText(full)
+      : full;
     // Render LaTeX
-    resultEl.textContent = full;
+    resultEl.textContent = cleanedFull;
     renderMath(resultEl);
 
     // Render plots
-    renderPlotsFromText(full, resultEl.parentNode, "📈 Függvény a feladatból:");
+    renderPlotsFromText(cleanedFull, resultEl.parentNode, "📈 Függvény a feladatból:");
 
     // Warn if figure was unreadable
     if (full.includes("ABBILDUNG_NICHT_LESBAR")) {
@@ -3325,7 +3331,7 @@ async function analyzeUpload() {
       task_id: (icons[currentFileType] || "📎") + " Feltöltött feladat",
       topic: "Egyedi feladat", subtopic: "Feltöltött fájlból",
       source: { level: "", year: "" },
-      points: null, question: full, expected_answer: "",
+      points: null, question: cleanedFull, expected_answer: "",
     };
     _el("loadPhotoBtn").style.display = "inline-flex";
   } else if (full.includes("MEGOLDAS_OLDAL")) {
@@ -3426,7 +3432,10 @@ async function analyzeBatch() {
         if (statusEl) statusEl.textContent = "❌ Nem feladat";
       } else {
         if (statusEl) statusEl.textContent = "✅ Kész";
-        allResults.push({ name: file.name, content: full });
+        const cleanedFull = window.MarthaUploadCleanup && typeof window.MarthaUploadCleanup.sanitizeExtractedTaskText === "function"
+          ? window.MarthaUploadCleanup.sanitizeExtractedTaskText(full)
+          : full;
+        allResults.push({ name: file.name, content: cleanedFull });
       }
     } catch (ex) {
       if (statusEl) statusEl.textContent = "❌ Hiba";

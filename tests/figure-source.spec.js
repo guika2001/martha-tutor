@@ -29,4 +29,18 @@ describe("figure pdf sources", () => {
     expect(sources).toHaveLength(2);
     expect(sources.map((item) => item.label)).toEqual(expect.arrayContaining(["CAS/MMS PDF", "WTR/GTR PDF"]));
   });
+
+  it("deduplicates repeated labels when multiple files collapse to the same source kind", () => {
+    const sources = resolveFigurePdfSources({
+      figureRequired: true,
+      topic: "Analysis",
+      examPart: "2. Prüfungsteil",
+      taskType: "Prüfungsaufgabe",
+      source: { level: "GK", year: "ab-2026" },
+      toolMode: "supported",
+    });
+
+    const labels = sources.map((item) => item.label);
+    expect(new Set(labels).size).toBe(labels.length);
+  });
 });
