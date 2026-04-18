@@ -42,4 +42,12 @@ describe("solution style localization", () => {
     expect(getResponseModeInstruction("step", "hu")).toContain("első érdemi lépést");
     expect(buildTeacherSystemPrompt({ primaryOperator: "számítsd ki" }, "hu", "step")).toContain("első érdemi lépést");
   });
+
+  it("adds Hungarian glossary guidance for German terms and notation", () => {
+    const prompt = buildTeacherSystemPrompt({ primaryOperator: "határozd meg" }, "hu", "solution");
+
+    expect(prompt).toContain("német szakkifejezést");
+    expect(prompt).toContain("Jelölések");
+    expect(prompt).toContain("^");
+  });
 });

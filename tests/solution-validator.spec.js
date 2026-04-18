@@ -53,4 +53,17 @@ describe("solution validator", () => {
       responseMode: "step",
     })).toContain("első lépés");
   });
+
+  it("adds Hungarian readability checks for glossary and notation explanations", () => {
+    const prompt = buildValidationPrompt({
+      taskContext: "FELADAT",
+      draft: "Megoldás",
+      langCode: "hu",
+      responseMode: "solution",
+    });
+
+    expect(getValidatorSystemPrompt("hu", "solution")).toContain("német szakkifejezések");
+    expect(getValidatorSystemPrompt("hu", "solution")).toContain("Jelölések");
+    expect(prompt).toContain("MEGOLDÁSTERVEZET");
+  });
 });
